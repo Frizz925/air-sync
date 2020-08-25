@@ -1,0 +1,8 @@
+.textarea {
+  @apply bg-gray-700 border border-transparent w-full text-sm p-2 rounded-md outline-none;
+}
+
+.textarea:active,
+.textarea:focus {
+  @apply border-gray-500;
+}

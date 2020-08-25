@@ -1,0 +1,34 @@
+.action {
+  @apply flex justify-center items-center;
+  @apply transition-colors duration-200;
+  @apply text-lg cursor-pointer;
+
+  width: theme('width.12');
+  height: theme('height.12');
+}
+
+.action > * {
+  @apply opacity-75;
+}
+
+.action:hover,
+.action:active,
+.action:focus {
+  @apply bg-gray-900 bg-opacity-50;
+}
+
+.action:hover > *,
+.action:active > *,
+.action:focus > * {
+  @apply opacity-100;
+}
+
+.action.red {
+  @apply text-red-600;
+}
+
+.action.red:hover,
+.action.red:active,
+.action.red:focus {
+  @apply bg-red-900 bg-opacity-50;
+}

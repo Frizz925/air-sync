@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: theme('colors.gray.900');
+}
+
+button {
+  @apply outline-none !important;
+}
+
+.btn {
+  @apply bg-gray-700 font-semibold px-3 py-1;
+  @apply transition-colors duration-200;
+}
+
+.btn:hover,
+.btn:active,
+.btn:focus {
+  @apply bg-gray-600;
+}
+
+.btn-primary {
+  @apply bg-blue-500 text-white;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:focus {
+  @apply bg-blue-700;
+}
+
+.btn-primary:disabled {
+  @apply bg-blue-300;
+}
+
+.container-main {
+  @apply mx-auto px-2 py-4 max-w-md;
+}
+
+.card {
+  @apply bg-gray-800 text-gray-300 rounded-lg shadow-xl mx-auto overflow-hidden;
+}
