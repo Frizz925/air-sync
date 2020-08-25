@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"errors"
 
 	"github.com/reactivex/rxgo/v2"
@@ -9,15 +10,21 @@ import (
 var ErrStreamClosed = errors.New("Stream closed")
 
 type Stream struct {
+	context.Context
 	rxgo.Observable
 	channel chan<- rxgo.Item
+	dispose rxgo.Disposable
 }
 
 func NewStream() *Stream {
 	ch := make(chan rxgo.Item, 1)
+	ob := rxgo.FromChannel(ch, rxgo.WithPublishStrategy(), rxgo.WithBufferedChannel(1))
+	ctx, dispose := ob.Connect()
 	return &Stream{
-		Observable: rxgo.FromChannel(ch),
+		Context:    ctx,
+		Observable: ob,
 		channel:    ch,
+		dispose:    dispose,
 	}
 }
 
@@ -31,4 +38,6 @@ func (s *Stream) FireError(err error) {
 
 func (s *Stream) Shutdown() {
 	s.FireError(ErrStreamClosed)
+	close(s.channel)
+	s.dispose()
 }

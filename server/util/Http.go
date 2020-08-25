@@ -48,7 +48,8 @@ type RestHandlerFunc func(req *http.Request) (*RestResponse, error)
 
 func WrapHandlerFunc(handler RequestHandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		res, err := handler(DecorateRequest(req))
+		req = DecorateRequest(req)
+		res, err := handler(req)
 		if err != nil {
 			res = &Response{
 				StatusCode:  500,
@@ -111,7 +112,8 @@ func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
 }
 
 func DecorateRequest(req *http.Request) *http.Request {
-	logger := log.New().WithField("client", req.RemoteAddr)
+	logger := log.New()
+	logger.Formatter = NewRequestLogFormatter(DefaultTextFormatter, req)
 	ctx := context.WithValue(req.Context(), requestLoggerKey, logger)
 	return req.WithContext(ctx)
 }
@@ -141,7 +143,6 @@ func WriteResponse(w http.ResponseWriter, req *http.Request, res *Response) {
 	w.Header().Set("Content-Type", res.ContentType)
 	w.WriteHeader(res.StatusCode)
 	if _, err := w.Write(res.Body); err != nil {
-		logger := RequestLogger(req)
-		logger.Error(err)
+		RequestLogger(req).Error(err)
 	}
 }

@@ -1,19 +1,27 @@
 package models
 
 import (
-	"air-sync/util"
-
 	uuid "github.com/satori/go.uuid"
 )
 
+type Content struct {
+	Type    string `json:"type"`
+	Mime    string `json:"mime"`
+	Payload string `json:"payload"`
+}
+
 type Session struct {
-	*util.Stream
-	Id string
+	Id      string   `json:"id"`
+	Content *Content `json:"content"`
 }
 
 func NewSession() *Session {
 	return &Session{
-		Stream: util.NewStream(),
-		Id:     uuid.NewV4().String(),
+		Id: uuid.NewV4().String(),
+		Content: &Content{
+			Type:    "text",
+			Mime:    "text/plain",
+			Payload: "",
+		},
 	}
 }

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"air-sync/handlers"
+	appHandlers "air-sync/handlers"
 	repos "air-sync/repositories"
+	"air-sync/util"
 	"context"
 	"net"
 	"net/http"
@@ -13,13 +14,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 func init() {
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(util.DefaultTextFormatter)
 }
 
 func main() {
@@ -39,8 +40,8 @@ func main() {
 func serve(ctx context.Context, addr string) {
 	repo := repos.NewSessionRepository()
 	router := mux.NewRouter()
-	handlers.NewApiHandler(repo).RegisterRoutes(router)
-	handlers.NewWebSocketHandler(repo).RegisterRoutes(router)
+	appHandlers.NewApiHandler(repo).RegisterRoutes(router)
+	appHandlers.NewWebSocketHandler(repo).RegisterRoutes(router)
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -49,7 +50,9 @@ func serve(ctx context.Context, addr string) {
 	}
 
 	server := &http.Server{
-		Handler: router,
+		Handler:      handlers.CORS()(router),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
 	}
 	go func() {
 		if err = server.Serve(l); err != nil && err != http.ErrServerClosed {

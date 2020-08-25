@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"air-sync/models"
 	repos "air-sync/repositories"
 	"air-sync/util"
+	"errors"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -12,14 +12,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var ErrSessionNotFound = errors.New("Session not found")
+
 type WebSocketHandler struct {
 	upgrader *websocket.Upgrader
 	repo     *repos.SessionRepository
 }
 
 type WebSocketSession struct {
-	*models.Session
-	*websocket.Conn
+	*repos.StreamSession
+	conn    *websocket.Conn
 	request *http.Request
 	logger  *log.Logger
 }
@@ -29,6 +31,9 @@ func NewWebSocketHandler(repo *repos.SessionRepository) *WebSocketHandler {
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  2048,
 			WriteBufferSize: 2048,
+			CheckOrigin: func(_ *http.Request) bool {
+				return true
+			},
 		},
 		repo: repo,
 	}
@@ -40,19 +45,24 @@ func (h *WebSocketHandler) RegisterRoutes(r *mux.Router) {
 
 func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Request) {
 	req = util.DecorateRequest(req)
+	logger := util.RequestLogger(req)
 	conn, err := h.upgrader.Upgrade(w, req, nil)
 	if err != nil {
-		util.WriteHttpError(w, req, err)
+		logger.Error(err)
 		return
 	}
 	defer conn.Close()
-	logger := util.RequestLogger(req)
 	id := mux.Vars(req)["id"]
 	session := h.repo.Get(id)
+	if session == nil {
+		util.WriteHttpError(w, req, ErrSessionNotFound)
+		return
+	}
 	ws := &WebSocketSession{
-		Session: session,
-		Conn:    conn,
-		request: req,
+		StreamSession: session,
+		conn:          conn,
+		request:       req,
+		logger:        logger,
 	}
 	if err := ws.Start(); err != nil {
 		logger.Error(err)
@@ -60,7 +70,6 @@ func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Reque
 }
 
 func (ws *WebSocketSession) Start() error {
-	logger := ws.logger
 	for item := range ws.Observe() {
 		if err := item.E; err != nil {
 			if err != util.ErrStreamClosed {
@@ -69,8 +78,8 @@ func (ws *WebSocketSession) Start() error {
 				break
 			}
 		}
-		if err := ws.WriteJSON(item.V); err != nil {
-			logger.Errorf("Error writing JSON: %+s", err)
+		if err := ws.conn.WriteJSON(item.V); err != nil {
+			return err
 		}
 	}
 	return nil
