@@ -1,7 +1,7 @@
 package main
 
 import (
-	appHandlers "air-sync/handlers"
+	handlers "air-sync/handlers"
 	repos "air-sync/repositories"
 	"air-sync/util"
 	"context"
@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -40,29 +40,36 @@ func main() {
 func serve(ctx context.Context, addr string) {
 	repo := repos.NewSessionRepository()
 	router := mux.NewRouter()
-	appHandlers.NewApiHandler(repo).RegisterRoutes(router)
-	appHandlers.NewWebSocketHandler(repo).RegisterRoutes(router)
+	handlers.NewApiHandler(repo).RegisterRoutes(router)
+	handlers.NewWebSocketHandler(repo).RegisterRoutes(router)
 
-	l, err := net.Listen("tcp", ":8080")
+	l, err := net.Listen("tcp4", ":8080")
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"*"},
+	})
 	server := &http.Server{
-		Handler:      handlers.CORS()(router),
+		Handler:      c.Handler(router),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
+
 	go func() {
 		if err = server.Serve(l); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 	}()
+
 	log.Infof("Server listening at %s", addr)
 	<-ctx.Done()
-
 	log.Info("Shutting down server")
+
 	ctxShutdown, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
