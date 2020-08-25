@@ -1,4 +1,5 @@
 import { DefaultContent } from '@/api/models/Content';
+import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
 import { createApiClient, createWebSocketClient } from '@/clients';
 import ConnectionState from '@/components/models/ConnectionState';
@@ -9,7 +10,9 @@ import SessionIndicator from '@/components/SessionIndicator';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 
-const sessionApi = new SessionApi(createApiClient());
+const apiClient = createApiClient();
+const sessionApi = new SessionApi(apiClient);
+const qrImageApi = new QrImageApi(apiClient);
 
 export default function SessionPage() {
   const router = useRouter();
@@ -72,7 +75,11 @@ export default function SessionPage() {
             connectionState={connectionState}
           />
         </div>
-        <SessionActions api={sessionApi} sessionId={sessionId} />
+        <SessionActions
+          sessionApi={sessionApi}
+          sessionId={sessionId}
+          qrImageApi={qrImageApi}
+        />
       </div>
       <SessionForm api={sessionApi} sessionId={sessionId} />
       <SessionContent content={content} />

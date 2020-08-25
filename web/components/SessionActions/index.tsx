@@ -1,32 +1,64 @@
+import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import { faQrcode } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
-import React from 'react';
+import React, { useState } from 'react';
+import Dialog from '../Dialog';
 import styles from './styles.module.css';
 
 export interface SessionActionsProps {
-  api: SessionApi;
   sessionId: string;
+  sessionApi: SessionApi;
+  qrImageApi: QrImageApi;
 }
 
-const SessionActions: React.FC<SessionActionsProps> = ({ api, sessionId }) => {
-  const handleQrCode = () => {};
+const SessionActions: React.FC<SessionActionsProps> = ({
+  sessionId,
+  sessionApi,
+  qrImageApi,
+}) => {
+  const [dialogShown, setDialogShown] = useState(false);
+  const [qrImageSrc, setQrImageSrc] = useState('');
 
-  const handleDelete = async () => {
+  const handleQrImage = async () => {
+    const href = location.href;
+    const queryIdx = href.indexOf('?');
+    const link = queryIdx >= 0 ? href.substring(0, queryIdx) : href;
     try {
-      await api.deleteSession(sessionId);
+      const src = await qrImageApi.generate(link);
+      setQrImageSrc(src);
+      setDialogShown(true);
     } catch (err) {
       console.error(err);
     }
   };
+
+  const handleDelete = async () => {
+    try {
+      await sessionApi.deleteSession(sessionId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleClose = () => {
+    setDialogShown(false);
+  };
+
   return (
-    <div className='flex flex-row'>
-      <IconButton icon={faQrcode} onClick={handleQrCode} />
-      <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
-    </div>
+    <React.Fragment>
+      <div className='flex flex-row'>
+        <IconButton icon={faQrcode} onClick={handleQrImage} />
+        <div className='flex-grow'></div>
+        <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
+      </div>
+      <Dialog shown={dialogShown} onClose={handleClose}>
+        <img src={qrImageSrc} />
+      </Dialog>
+    </React.Fragment>
   );
 };
 

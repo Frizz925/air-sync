@@ -1,0 +1,28 @@
+.overlay {
+  @apply fixed top-0 left-0 w-screen h-screen z-40 cursor-pointer;
+  @apply bg-black bg-opacity-50;
+  @apply flex flex-row justify-center items-start;
+}
+
+.container {
+  @apply fixed top-0 left-0 w-screen z-50 py-4 pointer-events-none;
+  @apply flex flex-row items-start justify-center;
+}
+
+.container > * {
+  @apply pointer-events-auto;
+}
+
+.transition.hidden {
+  @apply opacity-0;
+
+  visibility: hidden;
+  transition: opacity 300ms ease, visibility 0s linear 300ms;
+}
+
+.transition.shown {
+  @apply opacity-100;
+
+  visibility: visible;
+  transition: opacity 300ms ease, visibility 0s linear;
+}

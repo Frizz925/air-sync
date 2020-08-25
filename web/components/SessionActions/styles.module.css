@@ -3,8 +3,8 @@
   @apply transition-colors duration-200;
   @apply text-lg cursor-pointer;
 
-  width: theme('width.12');
-  height: theme('height.12');
+  width: theme('width.10');
+  height: theme('height.10');
 }
 
 .action > * {

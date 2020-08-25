@@ -1,15 +1,9 @@
-import { AxiosInstance } from 'axios';
 import Content from './models/Content';
 import RestResponse from './models/RestResponse';
 import Session from './models/Session';
+import RestApi from './RestApi';
 
-export default class SessionApi {
-  private readonly client: AxiosInstance;
-
-  constructor(client: AxiosInstance) {
-    this.client = client;
-  }
-
+export default class SessionApi extends RestApi {
   public async createSession() {
     const { data } = await this.client.post('/sessions');
     return data as RestResponse<string>;
