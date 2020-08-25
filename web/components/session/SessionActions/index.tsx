@@ -52,7 +52,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
 
   return (
     <React.Fragment>
-      <div className='flex flex-row'>
+      <div className='flex flex-row px-2 py-2'>
         <IconButton icon={faQrcode} onClick={handleQrImage} />
         <IconButton icon={faSync} onClick={onReload} />
         <div className='flex-grow'></div>

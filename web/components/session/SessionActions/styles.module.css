@@ -1,26 +1,16 @@
 .action {
-  @apply flex justify-center items-center;
+  @apply flex justify-center items-center cursor-pointer;
   @apply transition-colors duration-200;
-  @apply text-lg cursor-pointer;
+  @apply text-blue-500 text-lg rounded-full;
 
   width: theme('width.10');
   height: theme('height.10');
 }
 
-.action > * {
-  @apply opacity-75;
-}
-
 .action:hover,
 .action:active,
 .action:focus {
-  @apply bg-gray-900 bg-opacity-50;
-}
-
-.action:hover > *,
-.action:active > *,
-.action:focus > * {
-  @apply opacity-100;
+  @apply bg-blue-800 bg-opacity-50;
 }
 
 .action.red {
