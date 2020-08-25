@@ -45,6 +45,12 @@ func (h *WebSocketHandler) RegisterRoutes(r *mux.Router) {
 
 func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Request) {
 	req = util.DecorateRequest(req)
+	id := mux.Vars(req)["id"]
+	session := h.repo.Get(id)
+	if session == nil {
+		util.WriteHttpError(w, req, ErrSessionNotFound)
+		return
+	}
 	logger := util.RequestLogger(req)
 	conn, err := h.upgrader.Upgrade(w, req, nil)
 	if err != nil {
@@ -52,12 +58,6 @@ func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Reque
 		return
 	}
 	defer conn.Close()
-	id := mux.Vars(req)["id"]
-	session := h.repo.Get(id)
-	if session == nil {
-		util.WriteHttpError(w, req, ErrSessionNotFound)
-		return
-	}
 	ws := &WebSocketSession{
 		StreamSession: session,
 		conn:          conn,
@@ -66,6 +66,7 @@ func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Reque
 	}
 	if err := ws.Start(); err != nil {
 		logger.Error(err)
+		return
 	}
 }
 
