@@ -1,4 +1,5 @@
 import Content from '@/api/models/Content';
+import Card from '@/components/common/Card';
 import React from 'react';
 
 export interface SessionContentProps {
@@ -6,7 +7,9 @@ export interface SessionContentProps {
 }
 
 const SessionContent: React.FC<SessionContentProps> = ({ content }) => {
-  return <div className='card px-2 py-2 text-sm'>{content.payload}</div>;
+  return (
+    <Card className='px-2 py-2 text-sm whitespace-pre'>{content.payload}</Card>
+  );
 };
 
 export default SessionContent;

@@ -1,24 +1,26 @@
 import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
+import Dialog from '@/components/common/Dialog';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
-import { faQrcode } from '@fortawesome/free-solid-svg-icons';
+import { faQrcode, faSync } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
 import React, { useState } from 'react';
-import Dialog from '../Dialog';
 import styles from './styles.module.css';
 
 export interface SessionActionsProps {
   sessionId: string;
   sessionApi: SessionApi;
   qrImageApi: QrImageApi;
+  onReload: () => void;
 }
 
 const SessionActions: React.FC<SessionActionsProps> = ({
   sessionId,
   sessionApi,
   qrImageApi,
+  onReload,
 }) => {
   const [dialogShown, setDialogShown] = useState(false);
   const [qrImageSrc, setQrImageSrc] = useState('');
@@ -52,6 +54,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
     <React.Fragment>
       <div className='flex flex-row'>
         <IconButton icon={faQrcode} onClick={handleQrImage} />
+        <IconButton icon={faSync} onClick={onReload} />
         <div className='flex-grow'></div>
         <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
       </div>

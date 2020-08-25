@@ -1,6 +1,6 @@
+import ConnectionState from '@/components/models/ConnectionState';
 import classNames from 'classnames';
 import React from 'react';
-import ConnectionState from '../models/ConnectionState';
 
 export interface SessionIndicatorProps {
   sessionId: string;

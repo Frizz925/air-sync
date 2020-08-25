@@ -2,13 +2,14 @@ import { DefaultContent } from '@/api/models/Content';
 import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
 import { createApiClient, createWebSocketClient } from '@/clients';
+import Card from '@/components/common/Card';
 import ConnectionState from '@/components/models/ConnectionState';
-import SessionActions from '@/components/SessionActions';
-import SessionContent from '@/components/SessionContent';
-import SessionForm from '@/components/SessionForm';
-import SessionIndicator from '@/components/SessionIndicator';
+import SessionActions from '@/components/session/SessionActions';
+import SessionContent from '@/components/session/SessionContent';
+import SessionForm from '@/components/session/SessionForm';
+import SessionIndicator from '@/components/session/SessionIndicator';
 import { useRouter } from 'next/router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 const apiClient = createApiClient();
 const sessionApi = new SessionApi(apiClient);
@@ -38,8 +39,12 @@ export default function SessionPage() {
   };
 
   const wsRef = useRef<WebSocket>();
-  const setupWebSocket = (sessionId: string) => {
-    if (wsRef.current) wsRef.current.close();
+  const setupWebSocket = useCallback((sessionId: string) => {
+    if (wsRef.current) {
+      setConnectionState(ConnectionState.DISCONNECTED);
+      wsRef.current.close();
+    }
+
     const ws = createWebSocketClient(sessionId);
     ws.addEventListener('open', () => {
       setConnectionState(ConnectionState.CONNECTED);
@@ -54,21 +59,24 @@ export default function SessionPage() {
       setConnectionState(ConnectionState.DISCONNECTED);
     });
     setConnectionState(ConnectionState.CONNECTING);
+
     wsRef.current = ws;
-  };
+  }, []);
 
   const query = router.query;
   const sessionId = query.id as string;
 
-  useEffect(() => {
+  const handleReload = () => {
     if (!sessionId) return;
     setupApi(sessionId);
     setupWebSocket(sessionId);
-  }, [sessionId]);
+  };
+
+  useEffect(handleReload, [sessionId]);
 
   return (
     <div className='container container-main space-y-4'>
-      <div className='card'>
+      <Card>
         <div className='py-2 px-4'>
           <SessionIndicator
             sessionId={sessionId}
@@ -79,8 +87,9 @@ export default function SessionPage() {
           sessionApi={sessionApi}
           sessionId={sessionId}
           qrImageApi={qrImageApi}
+          onReload={handleReload}
         />
-      </div>
+      </Card>
       <SessionForm api={sessionApi} sessionId={sessionId} />
       <SessionContent content={content} />
     </div>

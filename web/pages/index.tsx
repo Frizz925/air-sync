@@ -1,7 +1,8 @@
 import SessionApi from '@/api/SessionApi';
 import { createApiClient } from '@/clients';
-import ConnectSession from '@/components/ConnectSession';
-import CreateSession from '@/components/CreateSession';
+import Card from '@/components/common/Card';
+import ConnectSession from '@/components/session/ConnectSession';
+import CreateSession from '@/components/session/CreateSession';
 import { useRouter } from 'next/router';
 import React from 'react';
 
@@ -16,13 +17,13 @@ export default function IndexPage() {
 
   return (
     <div className='container container-main'>
-      <div className='card max-w-lg mx-auto'>
+      <Card className='max-w-lg mx-auto'>
         <div className='flex flex-col items-center space-y-4 p-4'>
           <h1 className='text-3xl font-semibold'>Air Sync</h1>
           <ConnectSession connect={connect} />
           <CreateSession api={sessionApi} connect={connect} />
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

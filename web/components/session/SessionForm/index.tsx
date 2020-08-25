@@ -1,7 +1,9 @@
 import Content from '@/api/models/Content';
 import SessionApi from '@/api/SessionApi';
-import React, { useRef, useState } from 'react';
-import styles from './styles.module.css';
+import Button from '@/components/common/Button';
+import Card from '@/components/common/Card';
+import TextBox from '@/components/common/TextBox';
+import React, { useState } from 'react';
 
 export interface SessionFormProps {
   api: SessionApi;
@@ -11,25 +13,27 @@ export interface SessionFormProps {
 const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
   const [valid, setValid] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const textRef = useRef<HTMLTextAreaElement>();
+  const [textContent, setTextContent] = useState('');
 
   const resetForm = () => {
-    textRef.current.value = '';
+    setTextContent('');
     setValid(false);
   };
 
-  const handleTextArea = (evt: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = evt.target.value;
-    setValid(!!value);
+  const handleTextChange = (value: string) => {
+    const nextValid = !!value;
+    if (valid !== nextValid) setValid(nextValid);
+    setTextContent(value);
   };
 
   const handleSend = async () => {
+    if (!valid || processing) return;
     setProcessing(true);
     try {
       const content: Content = {
         type: 'text',
         mime: 'text/plain',
-        payload: textRef.current.value,
+        payload: textContent,
       };
       await api.sendMessage(sessionId, content);
       resetForm();
@@ -41,27 +45,23 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
   };
 
   return (
-    <div className='card p-2'>
-      <div>
-        <textarea
-          ref={textRef}
-          className={styles.textarea}
-          rows={1}
-          placeholder='Type your message here'
-          disabled={processing}
-          onChange={handleTextArea}
-        />
-      </div>
+    <Card className='card p-2 space-y-2'>
+      <TextBox
+        value={textContent}
+        placeholder='Type your message here'
+        onChange={handleTextChange}
+      />
       <div className='flex flex-row-reverse items-center'>
-        <button
-          className='btn btn-primary rounded-full'
+        <Button
+          color='primary'
+          className='rounded-full'
           onClick={handleSend}
-          disabled={!valid}
+          disabled={!valid || processing}
         >
           Send
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 };
 
