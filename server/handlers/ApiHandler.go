@@ -5,7 +5,10 @@ import (
 	repos "air-sync/repositories"
 	"air-sync/util"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
+
+	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -32,6 +35,8 @@ func (h *ApiHandler) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/api/sessions/{id}", h.WrapSessionHandlerFunc(h.GetSession)).Methods("GET")
 	r.HandleFunc("/api/sessions/{id}", util.WrapRestHandlerFunc(h.UpdateSession)).Methods("PUT")
 	r.HandleFunc("/api/sessions/{id}", util.WrapRestHandlerFunc(h.DeleteSession)).Methods("DELETE")
+
+	r.HandleFunc("/api/qr/generate", util.WrapHandlerFunc(h.GenerateQR)).Methods("POST")
 }
 
 func (h *ApiHandler) GetSessions(_ *http.Request) (*util.RestResponse, error) {
@@ -57,7 +62,7 @@ func (h *ApiHandler) UpdateSession(req *http.Request) (*util.RestResponse, error
 	id := mux.Vars(req)["id"]
 	content := &models.Content{}
 	dec := json.NewDecoder(req.Body)
-	if err := dec.Decode(content); dec != nil {
+	if err := dec.Decode(content); err != nil {
 		return nil, err
 	}
 	if !h.repository.Update(id, content) {
@@ -78,6 +83,22 @@ func (h *ApiHandler) DeleteSession(req *http.Request) (*util.RestResponse, error
 	util.RequestLogger(req).WithField("session_id", id).Info("Deleted session")
 	return &util.RestResponse{
 		Message: "Session deleted",
+	}, nil
+}
+
+func (h *ApiHandler) GenerateQR(req *http.Request) (*util.Response, error) {
+	b, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	q, err := qrcode.Encode(string(b), qrcode.Medium, 256)
+	if err != nil {
+		return nil, err
+	}
+	return &util.Response{
+		StatusCode:  200,
+		ContentType: "image/png",
+		Body:        q,
 	}, nil
 }
 
