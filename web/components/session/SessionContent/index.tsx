@@ -8,7 +8,9 @@ export interface SessionContentProps {
 
 const SessionContent: React.FC<SessionContentProps> = ({ content }) => {
   return (
-    <Card className='px-2 py-2 text-sm whitespace-pre'>{content.payload}</Card>
+    <Card className='px-2 py-2 text-sm whitespace-pre-wrap'>
+      {content.payload}
+    </Card>
   );
 };
 

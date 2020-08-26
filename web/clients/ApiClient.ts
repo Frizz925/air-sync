@@ -1,8 +1,9 @@
+import { getBaseUrl } from '@/utils/Url';
 import Axios from 'axios';
 
-const createApiClient = () =>
-  Axios.create({
-    baseURL: 'http://localhost:8080/api',
-  });
+const createApiClient = () => {
+  const baseUrl = getBaseUrl();
+  return Axios.create({ baseURL: `${baseUrl}/api` });
+};
 
 export default createApiClient;

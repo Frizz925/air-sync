@@ -34,6 +34,16 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
     if (onChange) onChange(value);
   }, [onChange]);
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const value = e.clipboardData.getData('text/plain');
+      document.execCommand('inserttext', false, value);
+    },
+    [handleChange]
+  );
+
   const textPlaceholderClasses = useMemo(
     () => classNames(styles.textPlaceholder, { [styles.hidden]: filled }),
     [filled]
@@ -56,6 +66,7 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
         contentEditable
         onInput={handleChange}
         onBlur={handleChange}
+        onPaste={handlePaste}
       />
       <div className={textPlaceholderClasses}>{placeholder}</div>
     </div>
