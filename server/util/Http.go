@@ -33,11 +33,11 @@ type RequestContext struct {
 
 var (
 	SuccessRestResponse = &RestResponse{
+		StatusCode: http.StatusOK,
 		Status:     "success",
-		StatusCode: 200,
 	}
 	SuccessResponse = &Response{
-		StatusCode:  200,
+		StatusCode:  http.StatusOK,
 		ContentType: "text/plain",
 		Body:        []byte("Success"),
 	}
@@ -51,11 +51,8 @@ func WrapHandlerFunc(handler RequestHandlerFunc) http.HandlerFunc {
 		req = DecorateRequest(req)
 		res, err := handler(req)
 		if err != nil {
-			res = &Response{
-				StatusCode:  500,
-				ContentType: "text/plain",
-				Body:        []byte(err.Error()),
-			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		if res == nil {
 			res = SuccessResponse
@@ -78,7 +75,7 @@ func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
 		res, err := handler(req)
 		if err != nil {
 			res = &RestResponse{
-				StatusCode: 500,
+				StatusCode: http.StatusInternalServerError,
 				Error:      err.Error(),
 			}
 		}
@@ -87,9 +84,9 @@ func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
 		}
 		if res.StatusCode <= 0 {
 			if res.Error != "" {
-				res.StatusCode = 500
+				res.StatusCode = http.StatusInternalServerError
 			} else {
-				res.StatusCode = 200
+				res.StatusCode = http.StatusOK
 			}
 		}
 		if res.Status == "" {
@@ -129,14 +126,6 @@ func CreateRestResponse(data interface{}) *RestResponse {
 	return &RestResponse{
 		Data: data,
 	}
-}
-
-func WriteHttpError(w http.ResponseWriter, req *http.Request, err error) {
-	WriteResponse(w, req, &Response{
-		StatusCode:  500,
-		ContentType: "text/plain",
-		Body:        []byte(err.Error()),
-	})
 }
 
 func WriteResponse(w http.ResponseWriter, req *http.Request, res *Response) {

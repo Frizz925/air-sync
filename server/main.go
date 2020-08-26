@@ -1,21 +1,10 @@
 package main
 
 import (
-	handlers "air-sync/handlers"
-	repos "air-sync/repositories"
+	"air-sync/app/cmd"
 	"air-sync/util"
-	"context"
-	"net"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/gorilla/mux"
 )
 
 func init() {
@@ -24,58 +13,7 @@ func init() {
 }
 
 func main() {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		sig := <-ch
-		log.Infof("Received signal: %+v", sig)
-		cancel()
-	}()
-
-	serve(ctx, "127.0.0.1:8080")
-}
-
-func serve(ctx context.Context, addr string) {
-	repo := repos.NewSessionRepository()
-	router := mux.NewRouter()
-	handlers.NewApiHandler(repo).RegisterRoutes(router)
-	handlers.NewWebSocketHandler(repo).RegisterRoutes(router)
-
-	l, err := net.Listen("tcp4", ":8080")
-	if err != nil {
+	if err := cmd.Execute(); err != nil {
 		log.Fatal(err)
-		return
-	}
-
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"*"},
-	})
-	server := &http.Server{
-		Handler:      c.Handler(router),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-	}
-
-	go func() {
-		if err = server.Serve(l); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
-		}
-	}()
-
-	log.Infof("Server listening at %s", addr)
-	<-ctx.Done()
-	log.Info("Shutting down server")
-
-	ctxShutdown, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err = server.Shutdown(ctxShutdown); err != nil {
-		log.Fatalf("Failed to shutdown: %+s\n", err)
-	} else {
-		log.Info("Server shutdown properly")
 	}
 }

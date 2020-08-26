@@ -15,7 +15,7 @@ import (
 )
 
 var ResSessionNotFound = &util.RestResponse{
-	StatusCode: 404,
+	StatusCode: http.StatusNotFound,
 	Error:      "Session not found",
 }
 
@@ -96,7 +96,6 @@ func (h *ApiHandler) GenerateQR(req *http.Request) (*util.Response, error) {
 		return nil, err
 	}
 	return &util.Response{
-		StatusCode:  200,
 		ContentType: "image/png",
 		Body:        q,
 	}, nil

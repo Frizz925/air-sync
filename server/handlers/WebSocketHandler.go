@@ -48,7 +48,7 @@ func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Reque
 	id := mux.Vars(req)["id"]
 	session := h.repo.Get(id)
 	if session == nil {
-		util.WriteHttpError(w, req, ErrSessionNotFound)
+		http.Error(w, ErrSessionNotFound.Error(), 404)
 		return
 	}
 	logger := util.RequestLogger(req)
