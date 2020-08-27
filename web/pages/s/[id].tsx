@@ -120,12 +120,34 @@ export default function SessionPage() {
   );
 
   const doLongPolling = useCallback(async (sessionId: string) => {
-    setConnectionState(ConnectionState.CONNECTING);
-    const resp = await lpClient.get(`/sessions/${sessionId}`);
-    setConnectionState(ConnectionState.CONNECTED);
-    const { data: content } = resp.data as RestResponse<Content>;
-    handleContent(content);
-    return doLongPolling(sessionId);
+    let hasError = false;
+    const start = new Date();
+    try {
+      setConnectionState(ConnectionState.CONNECTING);
+      const resp = await lpClient.get(`/sessions/${sessionId}`);
+      setConnectionState(ConnectionState.CONNECTED);
+      const { data: content } = resp.data as RestResponse<Content>;
+      handleContent(content);
+    } catch (err) {
+      console.error(err);
+      hasError = true;
+    }
+    const end = new Date();
+
+    return new Promise((resolve, reject) => {
+      const diff = end.getTime() - start.getTime();
+      // if last long-polling request didn't catch any error
+      // or if it did catch error after 15 seconds
+      // then execute the next request immediately
+      if (!hasError || diff >= 15000) {
+        doLongPolling(sessionId).then(resolve, reject);
+        return;
+      }
+      // else wait for 3 seconds before executing another request
+      setTimeout(() => {
+        doLongPolling(sessionId).then(resolve, reject);
+      }, 3000);
+    });
   }, []);
 
   const query = router.query;
