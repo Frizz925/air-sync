@@ -14,6 +14,7 @@ import SessionActions from '@/components/session/SessionActions';
 import SessionContent from '@/components/session/SessionContent';
 import SessionForm from '@/components/session/SessionForm';
 import SessionIndicator from '@/components/session/SessionIndicator';
+import { getEnvBool } from '@/utils/Env';
 import { NotificationHelper } from '@/utils/Notification';
 import { useRouter } from 'next/router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -58,6 +59,11 @@ export default function SessionPage() {
   const setupWebSocket = useCallback(
     (sessionId: string) =>
       new Promise((resolve, reject) => {
+        if (!getEnvBool('WEBSOCKET_ENABLED')) {
+          reject('WebSocket disabled');
+          return;
+        }
+
         if (wsRef.current) {
           setConnectionState(ConnectionState.DISCONNECTED);
           wsRef.current.close();
@@ -85,9 +91,14 @@ export default function SessionPage() {
   );
 
   const esRef = useRef<EventSource>();
-  const setupSSE = useCallback(
+  const setupEventStream = useCallback(
     (sessionId: string) =>
       new Promise((_, reject) => {
+        if (!getEnvBool('EVENT_STREAM_ENABLED')) {
+          reject('Event stream disabled');
+          return;
+        }
+
         if (esRef.current) {
           setConnectionState(ConnectionState.DISCONNECTED);
           esRef.current.close();
@@ -126,7 +137,7 @@ export default function SessionPage() {
     setupWebSocket(sessionId)
       .catch((err) => {
         console.error(err);
-        return setupSSE(sessionId);
+        return setupEventStream(sessionId);
       })
       .catch((err) => {
         console.error(err);
