@@ -1,10 +1,7 @@
-import SessionApi from '@/api/SessionApi';
 import React from 'react';
 import SessionProps from './SessionProps';
 
-export interface CreateSessionProps extends SessionProps {
-  api: SessionApi;
-}
+export interface CreateSessionProps extends SessionProps {}
 
 const CreateSession: React.FC<CreateSessionProps> = ({ api, connect }) => {
   const createSession = async () => {

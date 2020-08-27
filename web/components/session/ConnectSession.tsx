@@ -1,16 +1,31 @@
+import RestResponse from '@/api/models/RestResponse';
 import Button from '@/components/common/Button';
-import React, { useCallback, useRef } from 'react';
+import { AxiosResponse } from 'axios';
+import React, { useCallback, useRef, useState } from 'react';
 import SessionProps from './SessionProps';
 
-export type ConnectionSessionProps = SessionProps;
+export interface ConnectionSessionProps extends SessionProps {}
 
-const ConnectSession: React.FC<ConnectionSessionProps> = ({ connect }) => {
+const ConnectSession: React.FC<ConnectionSessionProps> = ({ api, connect }) => {
+  const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>();
 
-  const handleConnect = useCallback(() => {
+  const handleConnect = useCallback(async () => {
     const sessionId = inputRef.current.value;
     if (!sessionId) return;
-    connect(sessionId);
+    try {
+      await api.getSession(sessionId);
+      connect(sessionId);
+    } catch (err) {
+      let message = "Can't connect to session";
+      if (err.response) {
+        const res = (err.response as AxiosResponse).data as RestResponse<{}>;
+        message = res.error || res.message || message;
+      } else {
+        console.error(err);
+      }
+      setError(message);
+    }
   }, [inputRef, connect]);
 
   return (
@@ -24,6 +39,7 @@ const ConnectSession: React.FC<ConnectionSessionProps> = ({ connect }) => {
       <Button color='primary' className='rounded-full' onClick={handleConnect}>
         Connect
       </Button>
+      <div className='text-red-700 text-sm font-semibold'>{error}</div>
     </div>
   );
 };

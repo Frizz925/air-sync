@@ -20,7 +20,7 @@ export default function IndexPage() {
       <Card className='max-w-lg mx-auto'>
         <div className='flex flex-col items-center space-y-4 p-4'>
           <h1 className='text-3xl font-semibold'>Air Sync</h1>
-          <ConnectSession connect={connect} />
+          <ConnectSession api={sessionApi} connect={connect} />
           <CreateSession api={sessionApi} connect={connect} />
         </div>
       </Card>
