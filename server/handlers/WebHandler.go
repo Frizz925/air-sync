@@ -19,6 +19,8 @@ type WebHandler struct {
 	FileServer http.Handler
 }
 
+var _ RouteHandler = (*WebHandler)(nil)
+
 func NewWebHandler(options WebHandlerOptions) *WebHandler {
 	fs := http.FileServer(http.Dir(options.PublicPath))
 	return &WebHandler{

@@ -3,7 +3,6 @@ package handlers
 import (
 	repos "air-sync/repositories"
 	"air-sync/util"
-	"errors"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -11,8 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
-
-var ErrSessionNotFound = errors.New("Session not found")
 
 type WebSocketHandler struct {
 	upgrader *websocket.Upgrader
@@ -26,24 +23,31 @@ type WebSocketSession struct {
 	logger  *log.Logger
 }
 
-func NewWebSocketHandler(repo *repos.SessionRepository) *WebSocketHandler {
+type OriginCheck func(req *http.Request) bool
+
+var _ RouteHandler = (*WebSocketHandler)(nil)
+
+func NewWebSocketHandler(repo *repos.SessionRepository, cors bool) *WebSocketHandler {
+	var checkOrigin OriginCheck = nil
+	if cors {
+		checkOrigin = acceptAllOrigin
+	}
+
 	return &WebSocketHandler{
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  2048,
 			WriteBufferSize: 2048,
-			CheckOrigin: func(_ *http.Request) bool {
-				return true
-			},
+			CheckOrigin:     checkOrigin,
 		},
 		repo: repo,
 	}
 }
 
 func (h *WebSocketHandler) RegisterRoutes(r *mux.Router) {
-	r.HandleFunc("/ws/sessions/{id}", h.SetupWebSocket)
+	r.HandleFunc("/ws/sessions/{id}", h.SetupWS)
 }
 
-func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Request) {
+func (h *WebSocketHandler) SetupWS(w http.ResponseWriter, req *http.Request) {
 	req = util.DecorateRequest(req)
 	id := mux.Vars(req)["id"]
 	session := h.repo.Get(id)
@@ -66,12 +70,17 @@ func (h *WebSocketHandler) SetupWebSocket(w http.ResponseWriter, req *http.Reque
 	}
 	if err := ws.Start(); err != nil {
 		logger.Error(err)
-		return
 	}
 }
 
 func (ws *WebSocketSession) Start() error {
-	for item := range ws.Observe() {
+	ws.logger.WithField("session_id", ws.Id).Info("New WebSocket client connected")
+	defer ws.logger.WithField("session_id", ws.Id).Info("WebSocket client disconnected")
+
+	sub := ws.Subscribe()
+	defer sub.Unsubscribe()
+
+	for item := range sub.Observe() {
 		if err := item.E; err != nil {
 			if err != util.ErrStreamClosed {
 				return err
@@ -83,5 +92,10 @@ func (ws *WebSocketSession) Start() error {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func acceptAllOrigin(_ *http.Request) bool {
+	return true
 }

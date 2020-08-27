@@ -1,43 +1,94 @@
 package util
 
 import (
-	"context"
 	"errors"
-
-	"github.com/reactivex/rxgo/v2"
+	"sync"
 )
 
 var ErrStreamClosed = errors.New("Stream closed")
 
+type Item struct {
+	E error
+	V interface{}
+}
+
+type Subscriber struct {
+	id      int
+	stream  *Stream
+	channel chan *Item
+}
+
 type Stream struct {
-	context.Context
-	rxgo.Observable
-	channel chan<- rxgo.Item
-	dispose rxgo.Disposable
+	sync.RWMutex
+	nextId      int
+	subscribers map[int]*Subscriber
 }
 
 func NewStream() *Stream {
-	ch := make(chan rxgo.Item, 1)
-	ob := rxgo.FromChannel(ch, rxgo.WithPublishStrategy(), rxgo.WithBufferedChannel(1))
-	ctx, dispose := ob.Connect()
 	return &Stream{
-		Context:    ctx,
-		Observable: ob,
-		channel:    ch,
-		dispose:    dispose,
+		nextId:      0,
+		subscribers: make(map[int]*Subscriber),
+	}
+}
+
+func (s *Stream) Subscribe() *Subscriber {
+	defer s.Unlock()
+	s.Lock()
+	s.nextId++
+	sub := &Subscriber{
+		id:      s.nextId,
+		stream:  s,
+		channel: make(chan *Item, 1),
+	}
+	s.subscribers[sub.id] = sub
+	return sub
+}
+
+func (s *Stream) Unsubscribe(id int) {
+	defer s.Unlock()
+	s.Lock()
+	if sub, ok := s.subscribers[id]; ok {
+		delete(s.subscribers, id)
+		close(sub.channel)
 	}
 }
 
 func (s *Stream) Fire(event interface{}) {
-	s.channel <- rxgo.Of(event)
+	s.FireItem(&Item{
+		E: nil,
+		V: event,
+	})
 }
 
 func (s *Stream) FireError(err error) {
-	s.channel <- rxgo.Error(err)
+	s.FireItem(&Item{
+		E: err,
+		V: nil,
+	})
+}
+
+func (s *Stream) FireItem(item *Item) {
+	defer s.RUnlock()
+	s.RLock()
+	for _, sub := range s.subscribers {
+		select {
+		case sub.channel <- item:
+		default:
+		}
+	}
 }
 
 func (s *Stream) Shutdown() {
 	s.FireError(ErrStreamClosed)
-	close(s.channel)
-	s.dispose()
+	for _, sub := range s.subscribers {
+		s.Unsubscribe(sub.id)
+	}
+}
+
+func (s *Subscriber) Observe() <-chan *Item {
+	return s.channel
+}
+
+func (s *Subscriber) Unsubscribe() {
+	s.stream.Unsubscribe(s.id)
 }

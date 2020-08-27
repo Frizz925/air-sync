@@ -1,6 +1,7 @@
 package util
 
 import (
+	"air-sync/util/logging"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -109,10 +110,15 @@ func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
 }
 
 func DecorateRequest(req *http.Request) *http.Request {
-	logger := log.New()
-	logger.Formatter = NewRequestLogFormatter(DefaultTextFormatter, req)
+	logger := CreateRequestLogger(req)
 	ctx := context.WithValue(req.Context(), requestLoggerKey, logger)
 	return req.WithContext(ctx)
+}
+
+func CreateRequestLogger(req *http.Request) *log.Logger {
+	logger := log.New()
+	logger.Formatter = logging.NewRequestLogFormatter(DefaultTextFormatter, req)
+	return logger
 }
 
 func RequestLogger(req *http.Request) *log.Logger {
@@ -132,6 +138,10 @@ func WriteResponse(w http.ResponseWriter, req *http.Request, res *Response) {
 	w.Header().Set("Content-Type", res.ContentType)
 	w.WriteHeader(res.StatusCode)
 	if _, err := w.Write(res.Body); err != nil {
-		RequestLogger(req).Error(err)
+		switch err {
+		case http.ErrBodyNotAllowed:
+		default:
+			RequestLogger(req).Error(err)
+		}
 	}
 }
