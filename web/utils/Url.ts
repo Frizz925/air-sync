@@ -1,3 +1,5 @@
+import { IS_DEV } from './Env';
+
 export const getBaseUrl = (webSocket: boolean = false) => {
   let scheme = getScheme();
   if (webSocket) {
@@ -14,7 +16,7 @@ export const getScheme = () => {
 };
 
 export const getHost = () => {
-  if (process.env.NODE_ENV === 'development') {
+  if (IS_DEV) {
     return 'localhost:8080';
   } else if (!process.browser) {
     return 'localhost';

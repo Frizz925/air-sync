@@ -21,7 +21,6 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
 
   const handleFilled = (value: string) => {
     const nextFilled = !!value;
-    console.log(value, filled, nextFilled);
     if (filled !== nextFilled) setFilled(nextFilled);
   };
 
