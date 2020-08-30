@@ -8,7 +8,7 @@
 
   direction: ltr;
   line-height: theme('height.6');
-  height: theme('height.6');
+  min-height: theme('height.6');
 }
 
 .textPlaceholder {
