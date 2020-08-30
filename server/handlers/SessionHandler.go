@@ -5,6 +5,7 @@ import (
 	repos "air-sync/repositories"
 	"air-sync/util"
 	"air-sync/util/logging"
+	"air-sync/util/pubsub"
 	"errors"
 	"net/http"
 
@@ -23,14 +24,16 @@ var (
 )
 
 type SessionHandler struct {
-	repo *repos.SessionRepository
+	repo   repos.SessionRepository
+	stream *pubsub.Stream
 }
 
-type SessionHandlerFunc func(req *http.Request, session *repos.StreamSession) (interface{}, error)
+type SessionHandlerFunc func(req *http.Request, session *models.Session) (interface{}, error)
 
-func NewSessionHandler(repo *repos.SessionRepository) *SessionHandler {
+func NewSessionHandler(repo repos.SessionRepository, stream *pubsub.Stream) *SessionHandler {
 	return &SessionHandler{
-		repo: repo,
+		repo:   repo,
+		stream: stream,
 	}
 }
 
@@ -47,11 +50,11 @@ func (h *SessionHandler) ApplySessionLogger(logger *log.Logger, session *models.
 func (h *SessionHandler) WrapSessionHandlerFunc(handler SessionHandlerFunc) http.HandlerFunc {
 	return util.WrapRestHandlerFunc(func(req *http.Request) (*util.RestResponse, error) {
 		id := mux.Vars(req)["id"]
-		session := h.repo.Get(id)
-		if session == nil {
-			return ResSessionNotFound, nil
+		session, err := h.repo.Get(id)
+		if err != nil {
+			return h.HandleSessionRestError(err)
 		}
-		h.ApplySessionLogger(util.RequestLogger(req), session.Session)
+		h.ApplySessionLogger(util.RequestLogger(req), session)
 		data, err := handler(req, session)
 		if err != nil {
 			return nil, err
@@ -60,4 +63,19 @@ func (h *SessionHandler) WrapSessionHandlerFunc(handler SessionHandlerFunc) http
 			Data: data,
 		}, nil
 	})
+}
+
+func (h *SessionHandler) HandleSessionRestError(err error) (*util.RestResponse, error) {
+	if err == repos.ErrSessionNotFound {
+		return ResSessionNotFound, nil
+	}
+	return nil, err
+}
+
+func (h *SessionHandler) HandleSessionError(w http.ResponseWriter, err error) {
+	code := http.StatusInternalServerError
+	if err == repos.ErrSessionNotFound {
+		code = http.StatusNotFound
+	}
+	http.Error(w, err.Error(), code)
 }

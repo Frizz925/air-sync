@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"air-sync/models"
 	repos "air-sync/repositories"
-	"air-sync/util"
+	"air-sync/subscribers/events"
+	"air-sync/util/pubsub"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -22,9 +24,9 @@ type StreamingHandler struct {
 
 var _ RouteHandler = (*StreamingHandler)(nil)
 
-func NewStreamingHandler(repo *repos.SessionRepository) *StreamingHandler {
+func NewStreamingHandler(repo repos.SessionRepository, stream *pubsub.Stream) *StreamingHandler {
 	return &StreamingHandler{
-		SessionHandler: NewSessionHandler(repo),
+		SessionHandler: NewSessionHandler(repo, stream),
 	}
 }
 
@@ -40,12 +42,13 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 	}
 
 	id := mux.Vars(req)["id"]
-	session := h.repo.Get(id)
-	if session == nil {
-		http.Error(w, ErrSessionNotFound.Error(), http.StatusNotFound)
+	session, err := h.repo.Get(id)
+	if err != nil {
+		h.HandleSessionError(w, err)
 		return
 	}
-	logger := h.CreateSessionLogger(req, session.Session)
+
+	logger := h.CreateSessionLogger(req, session)
 	logger.Info("Started event streaming session")
 	defer logger.Info("Event streaming session ended")
 
@@ -59,38 +62,33 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	sub := session.Subscribe()
-	defer sub.Unsubscribe()
-
-	for item := range sub.Observe() {
-		if err := item.E; err != nil {
-			if err != util.ErrStreamClosed {
-				logger.Error(err)
-			}
-			break
-		}
-		b, err := json.Marshal(item.V)
-		if err != nil {
-			logger.Error(err)
-			break
-		}
-		if err := h.SendEvent(rwf, "content", string(b)); err != nil {
-			logger.Error(err)
-			break
-		}
+	topic := h.stream.Topic(events.SessionEventName(id))
+	if err := topic.ForEach(h.HandleStream(rwf, session)); err != nil {
+		logger.Error(err)
+		return
 	}
 }
 
-func (h *StreamingHandler) SendEvent(w ResponseWriteFlusher, event string, data string) error {
+func (h *StreamingHandler) HandleStream(rwf ResponseWriteFlusher, session *models.Session) pubsub.SubscribeFunc {
+	return func(v interface{}) error {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		return h.SendEvent(rwf, "message", string(b))
+	}
+}
+
+func (h *StreamingHandler) SendEvent(rwf ResponseWriteFlusher, event string, data string) error {
 	payload := strings.Join([]string{
 		"id: " + uuid.NewV4().String(),
 		"event: " + event,
 		"data: " + data,
 		"\n",
 	}, "\n")
-	if _, err := w.Write([]byte(payload)); err != nil {
+	if _, err := rwf.Write([]byte(payload)); err != nil {
 		return err
 	}
-	w.Flush()
+	rwf.Flush()
 	return nil
 }

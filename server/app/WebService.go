@@ -52,8 +52,8 @@ func (s *WebService) Start(ctx context.Context) error {
 
 	server := &http.Server{
 		Handler:      handler,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  45 * time.Second,
+		WriteTimeout: 45 * time.Second,
 	}
 
 	go func() {

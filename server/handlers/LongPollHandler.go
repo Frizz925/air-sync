@@ -2,7 +2,9 @@ package handlers
 
 import (
 	repos "air-sync/repositories"
+	"air-sync/subscribers/events"
 	"air-sync/util"
+	"air-sync/util/pubsub"
 	"net/http"
 	"time"
 
@@ -15,9 +17,9 @@ type LongPollHandler struct {
 
 var _ RouteHandler = (*LongPollHandler)(nil)
 
-func NewLongPollHandler(repo *repos.SessionRepository) *LongPollHandler {
+func NewLongPollHandler(repo repos.SessionRepository, stream *pubsub.Stream) *LongPollHandler {
 	return &LongPollHandler{
-		SessionHandler: NewSessionHandler(repo),
+		SessionHandler: NewSessionHandler(repo, stream),
 	}
 }
 
@@ -27,24 +29,24 @@ func (h *LongPollHandler) RegisterRoutes(r *mux.Router) {
 
 func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, error) {
 	id := mux.Vars(req)["id"]
-	session := h.repo.Get(id)
-	if session == nil {
-		return ResSessionNotFound, nil
+	session, err := h.repo.Get(id)
+	if err != nil {
+		return h.HandleSessionRestError(err)
 	}
 	logger := util.RequestLogger(req)
-	h.ApplySessionLogger(logger, session.Session)
+	h.ApplySessionLogger(logger, session)
 
 	logger.Info("Started long-polling session")
 	defer logger.Info("Long-polling session ended")
 
-	sub := session.Subscribe()
-	timeout := time.After(30 * time.Second) // Poll for 30 seconds
+	sub := h.stream.Topic(events.SessionEventName(id)).Subscribe()
 	defer sub.Unsubscribe()
 
+	timeout := time.After(30 * time.Second) // Poll for 30 seconds
 	select {
 	case item := <-sub.Observe():
 		if err := item.E; err != nil {
-			if err != util.ErrStreamClosed {
+			if err != pubsub.ErrStreamClosed {
 				return nil, err
 			}
 		} else {

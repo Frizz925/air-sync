@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	repos "air-sync/repositories"
 	"air-sync/util"
 	"net/http"
 
@@ -9,22 +8,20 @@ import (
 )
 
 type ApiHandler struct {
-	*SessionRestHandler
-	QrRestHandler
+	handlers []RouteHandler
 }
 
 var _ RouteHandler = (*ApiHandler)(nil)
 
-func NewApiHandler(repo *repos.SessionRepository) *ApiHandler {
-	return &ApiHandler{
-		SessionRestHandler: NewSessionRestHandler(repo),
-	}
+func NewApiHandler(handlers ...RouteHandler) *ApiHandler {
+	return &ApiHandler{handlers}
 }
 
 func (h *ApiHandler) RegisterRoutes(r *mux.Router) {
 	s := r.PathPrefix("/api").Subrouter()
-	h.SessionRestHandler.RegisterRoutes(s)
-	h.QrRestHandler.RegisterRoutes(s)
+	for _, rh := range h.handlers {
+		rh.RegisterRoutes(s)
+	}
 	s.PathPrefix("").HandlerFunc(util.WrapRestHandlerFunc(h.NotFound))
 }
 

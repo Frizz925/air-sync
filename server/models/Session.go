@@ -1,27 +1,21 @@
 package models
 
 import (
+	"time"
+
 	uuid "github.com/satori/go.uuid"
 )
 
-type Content struct {
-	Type    string `json:"type"`
-	Mime    string `json:"mime"`
-	Payload string `json:"payload"`
-}
-
 type Session struct {
-	Id      string   `json:"id"`
-	Content *Content `json:"content"`
+	Id        string    `json:"id"`
+	Messages  []Message `json:"messages"`
+	CreatedAt int64     `json:"created_at"`
 }
 
-func NewSession() *Session {
-	return &Session{
-		Id: uuid.NewV4().String(),
-		Content: &Content{
-			Type:    "text",
-			Mime:    "text/plain",
-			Payload: "",
-		},
+func NewSession() Session {
+	return Session{
+		Id:        uuid.NewV4().String(),
+		Messages:  make([]Message, 0),
+		CreatedAt: time.Now().UTC().UnixNano() / int64(time.Millisecond),
 	}
 }

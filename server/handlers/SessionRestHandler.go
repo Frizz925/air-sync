@@ -3,7 +3,9 @@ package handlers
 import (
 	"air-sync/models"
 	repos "air-sync/repositories"
+	"air-sync/subscribers/events"
 	"air-sync/util"
+	"air-sync/util/pubsub"
 	"encoding/json"
 	"net/http"
 
@@ -17,29 +19,25 @@ type SessionRestHandler struct {
 
 var _ RouteHandler = (*SessionRestHandler)(nil)
 
-func NewSessionRestHandler(repo *repos.SessionRepository) *SessionRestHandler {
+func NewSessionRestHandler(repo repos.SessionRepository, stream *pubsub.Stream) *SessionRestHandler {
 	return &SessionRestHandler{
-		SessionHandler: NewSessionHandler(repo),
+		SessionHandler: NewSessionHandler(repo, stream),
 	}
 }
 
 func (h *SessionRestHandler) RegisterRoutes(r *mux.Router) {
 	s := r.PathPrefix("/sessions").Subrouter()
-	// s.HandleFunc("/", util.WrapRestHandlerFunc(h.GetSessions)).Methods("GET")
 	s.HandleFunc("", util.WrapRestHandlerFunc(h.CreateSession)).Methods("POST")
 	s.HandleFunc("/{id}", h.WrapSessionHandlerFunc(h.GetSession)).Methods("GET")
 	s.HandleFunc("/{id}", util.WrapRestHandlerFunc(h.UpdateSession)).Methods("PUT")
 	s.HandleFunc("/{id}", util.WrapRestHandlerFunc(h.DeleteSession)).Methods("DELETE")
 }
 
-func (h *SessionRestHandler) GetSessions(_ *http.Request) (*util.RestResponse, error) {
-	return &util.RestResponse{
-		Data: h.repo.All(),
-	}, nil
-}
-
 func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestResponse, error) {
-	session := h.repo.Create()
+	session, err := h.repo.Create()
+	if err != nil {
+		return h.HandleSessionRestError(err)
+	}
 	util.RequestLogger(req).WithField("session_id", session.Id).Info("Created new session")
 	return &util.RestResponse{
 		Message: "Session created",
@@ -47,32 +45,40 @@ func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestRespons
 	}, nil
 }
 
-func (h *SessionRestHandler) GetSession(req *http.Request, session *repos.StreamSession) (interface{}, error) {
-	return session.Session, nil
+func (h *SessionRestHandler) GetSession(req *http.Request, session *models.Session) (interface{}, error) {
+	return session, nil
 }
 
 func (h *SessionRestHandler) UpdateSession(req *http.Request) (*util.RestResponse, error) {
 	id := mux.Vars(req)["id"]
-	content := &models.Content{}
+	message := models.NewMessage()
 	dec := json.NewDecoder(req.Body)
-	if err := dec.Decode(content); err != nil {
+	if err := dec.Decode(&message); err != nil {
 		return nil, err
 	}
-	if !h.repo.Update(id, content) {
-		return ResSessionNotFound, nil
+	if message.Content == "" {
+		return &util.RestResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    "Malformed request",
+			Error:      "Message content is empty",
+		}, nil
 	}
+	h.stream.Topic("update").Fire(events.SessionUpdate{
+		Id:      id,
+		Message: message,
+	})
 	util.RequestLogger(req).WithFields(log.Fields{
 		"session_id": id,
-		"content":    content,
+		"message":    message,
 	}).Info("Updated session")
-	return nil, nil
+	return &util.RestResponse{
+		Message: "Session updated",
+	}, nil
 }
 
 func (h *SessionRestHandler) DeleteSession(req *http.Request) (*util.RestResponse, error) {
 	id := mux.Vars(req)["id"]
-	if ok := h.repo.Delete(id); !ok {
-		return ResSessionNotFound, nil
-	}
+	h.stream.Topic("delete").Fire(events.SessionDelete(id))
 	util.RequestLogger(req).WithField("session_id", id).Info("Deleted session")
 	return &util.RestResponse{
 		Message: "Session deleted",
