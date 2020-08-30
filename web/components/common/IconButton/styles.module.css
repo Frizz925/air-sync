@@ -1,0 +1,30 @@
+.container {
+  @apply relative cursor-pointer;
+  @apply transition-colors duration-200;
+  @apply text-gray-500 rounded-full;
+
+  width: theme('width.8');
+  height: theme('height.8');
+}
+
+.container:hover,
+.container:active,
+.container:focus {
+  @apply bg-gray-700 bg-opacity-50;
+}
+
+.red {
+  @apply text-red-600;
+}
+
+.red:hover {
+  @apply bg-red-900 bg-opacity-50;
+}
+
+.blue {
+  @apply text-blue-500;
+}
+
+.blue:hover {
+  @apply bg-blue-800;
+}

@@ -1,13 +1,10 @@
 import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
 import Dialog from '@/components/common/Dialog';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import IconButton from '@/components/common/IconButton';
 import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import { faQrcode, faSync } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import classNames from 'classnames';
 import React, { useState } from 'react';
-import styles from './styles.module.css';
 
 export interface SessionActionsProps {
   sessionId: string;
@@ -56,8 +53,8 @@ const SessionActions: React.FC<SessionActionsProps> = ({
   return (
     <React.Fragment>
       <div className='flex flex-row px-2 py-2'>
-        <IconButton icon={faQrcode} onClick={handleQrImage} />
-        <IconButton icon={faSync} onClick={onReload} />
+        <IconButton icon={faQrcode} color='blue' onClick={handleQrImage} />
+        <IconButton icon={faSync} color='blue' onClick={onReload} />
         <div className='flex-grow'></div>
         <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
       </div>
@@ -65,23 +62,6 @@ const SessionActions: React.FC<SessionActionsProps> = ({
         <img src={qrImageSrc} />
       </Dialog>
     </React.Fragment>
-  );
-};
-
-interface IconButtonProps {
-  color?: string;
-  icon: IconProp;
-  onClick: () => void;
-}
-
-const IconButton: React.FC<IconButtonProps> = ({ color, icon, onClick }) => {
-  const classes = color
-    ? classNames(styles.action, styles[color])
-    : styles.action;
-  return (
-    <button className={classes} onClick={onClick}>
-      <FontAwesomeIcon icon={icon} />
-    </button>
   );
 };
 
