@@ -1,4 +1,4 @@
-import Content from '@/api/models/Content';
+import { DefaultMessage } from '@/api/models/Message';
 import SessionApi from '@/api/SessionApi';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
@@ -13,29 +13,26 @@ export interface SessionFormProps {
 const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
   const [valid, setValid] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [textContent, setTextContent] = useState('');
+  const [textMessage, setTextMessage] = useState('');
 
   const resetForm = () => {
-    setTextContent('');
+    setTextMessage('');
     setValid(false);
   };
 
   const handleTextChange = (value: string) => {
     const nextValid = !!value;
     if (valid !== nextValid) setValid(nextValid);
-    setTextContent(value);
+    setTextMessage(value);
   };
 
   const handleSend = async () => {
     if (!valid || processing) return;
     setProcessing(true);
     try {
-      const content: Content = {
-        type: 'text',
-        mime: 'text/plain',
-        payload: textContent,
-      };
-      await api.sendMessage(sessionId, content);
+      const message = DefaultMessage();
+      message.content = textMessage;
+      await api.sendMessage(sessionId, message);
       resetForm();
     } catch (err) {
       console.error(err);
@@ -47,7 +44,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
   return (
     <Card className='card p-2 space-y-2'>
       <TextBox
-        value={textContent}
+        value={textMessage}
         placeholder='Type your message here'
         onChange={handleTextChange}
       />

@@ -11,13 +11,12 @@ const CreateSession: React.FC<CreateSessionProps> = ({ api, connect }) => {
 
   return (
     <div className='text-center'>
-      <a
-        href='#'
-        className='text-blue-500 font-semibold'
+      <span
+        className='text-blue-500 font-semibold cursor-pointer'
         onClick={createSession}
       >
         Create New Session
-      </a>
+      </span>
     </div>
   );
 };

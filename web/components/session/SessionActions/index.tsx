@@ -14,6 +14,7 @@ export interface SessionActionsProps {
   sessionApi: SessionApi;
   qrImageApi: QrImageApi;
   onReload: () => void;
+  onDelete: () => void;
 }
 
 const SessionActions: React.FC<SessionActionsProps> = ({
@@ -21,6 +22,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
   sessionApi,
   qrImageApi,
   onReload,
+  onDelete,
 }) => {
   const [dialogShown, setDialogShown] = useState(false);
   const [qrImageSrc, setQrImageSrc] = useState('');
@@ -41,6 +43,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
   const handleDelete = async () => {
     try {
       await sessionApi.deleteSession(sessionId);
+      onDelete();
     } catch (err) {
       console.error(err);
     }

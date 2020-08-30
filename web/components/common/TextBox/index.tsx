@@ -26,7 +26,7 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
 
   const handleChange = useCallback(() => {
     const oldValue = valueRef.current;
-    const value = textRef.current.innerText;
+    const value = textRef.current.innerText.trim();
     if (oldValue === value) return;
     valueRef.current = value;
     handleFilled(value);

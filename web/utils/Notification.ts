@@ -1,11 +1,12 @@
-import { getEnvBool } from './Env';
+const notificationEnabled =
+  process.env.NEXT_PUBLIC_NOTIFICATION_ENABLED === 'true';
 
 export class NotificationHelper {
   private notificationAllowed = false;
 
   public initialize() {
     if (!process.browser) return;
-    if (!getEnvBool('NOTIFICATION_ENABLED')) return;
+    if (!notificationEnabled) return;
     Notification.requestPermission().then(
       (result) => {
         this.notificationAllowed = result === 'granted';

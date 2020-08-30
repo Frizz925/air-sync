@@ -5,7 +5,7 @@ const createLongPollingClient = () => {
   const baseUrl = getBaseUrl();
   return Axios.create({
     baseURL: `${baseUrl}/lp`,
-    timeout: 30000,
+    timeout: 45000,
   });
 };
 

@@ -1,4 +1,4 @@
-import Content from './models/Content';
+import Message from './models/Message';
 import RestResponse from './models/RestResponse';
 import Session from './models/Session';
 import RestApi from './RestApi';
@@ -19,8 +19,8 @@ export default class SessionApi extends RestApi {
     return data as RestResponse<undefined>;
   }
 
-  public async sendMessage(id: string, content: Content) {
-    const { data } = await this.client.put(`/sessions/${id}`, content);
+  public async sendMessage(id: string, message: Message) {
+    const { data } = await this.client.put(`/sessions/${id}`, message);
     return data as RestResponse<undefined>;
   }
 }

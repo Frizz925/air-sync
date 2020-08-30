@@ -1,4 +1,4 @@
-import Content, { DefaultContent } from '@/api/models/Content';
+import Message from '@/api/models/Message';
 import RestResponse from '@/api/models/RestResponse';
 import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
@@ -11,18 +11,23 @@ import {
 import Card from '@/components/common/Card';
 import ConnectionState from '@/components/models/ConnectionState';
 import SessionActions from '@/components/session/SessionActions';
-import SessionContent from '@/components/session/SessionContent';
 import SessionForm from '@/components/session/SessionForm';
 import SessionIndicator from '@/components/session/SessionIndicator';
-import { getEnvBool } from '@/utils/Env';
+import SessionMessage from '@/components/session/SessionMessage';
 import { NotificationHelper } from '@/utils/Notification';
+import map from 'lodash/map';
 import { useRouter } from 'next/router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { resolve } from 'path';
+import React, { useEffect, useRef, useState } from 'react';
 
 const apiClient = createApiClient();
 const lpClient = createLongPollingClient();
 const sessionApi = new SessionApi(apiClient);
 const qrImageApi = new QrImageApi(apiClient);
+
+const webSocketEnabled = process.env.NEXT_PUBLIC_WEBSOCKET_ENABLED === 'true';
+const eventStreamEnabled =
+  process.env.NEXT_PUBLIC_EVENT_STREAM_ENABLED === 'true';
 
 const notificationHelper = new NotificationHelper();
 notificationHelper.initialize();
@@ -34,100 +39,115 @@ export default function SessionPage() {
     router.push('/');
   };
 
+  const [running, setRunning] = useState(true);
   const [connectionState, setConnectionState] = useState(
     ConnectionState.DISCONNECTED
   );
-  const [content, setContent] = useState(DefaultContent());
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [timestamp, setTimestamp] = useState<number>(new Date().getTime());
 
-  const handleContent = useCallback((content: Content) => {
-    setContent(content);
-    notificationHelper.notify(document.title, content.payload);
-  }, []);
+  const messagesRef = useRef<Message[]>([]);
+  const handleMessage = (message: Message) => {
+    notificationHelper.notify(document.title, message.content);
+    const newMessages = [message, ...messagesRef.current];
+    setMessages(newMessages);
+    messagesRef.current = newMessages;
+  };
 
   const setupApi = async (sessionId: string) => {
     try {
       const {
-        data: { content },
+        data: { messages },
       } = await sessionApi.getSession(sessionId);
-      setContent(content);
+      messagesRef.current = messages;
+      setMessages(messages);
     } catch (err) {
       handleError(err);
     }
   };
 
   const wsRef = useRef<WebSocket>();
-  const setupWebSocket = useCallback(
-    (sessionId: string) =>
-      new Promise((resolve, reject) => {
-        if (!getEnvBool('WEBSOCKET_ENABLED')) {
-          reject('WebSocket disabled');
-          return;
-        }
+  const setupWebSocket = (sessionId: string) =>
+    new Promise((resolve, reject) => {
+      if (!webSocketEnabled) {
+        reject('WebSocket disabled');
+        return;
+      }
 
-        if (wsRef.current) {
-          setConnectionState(ConnectionState.DISCONNECTED);
-          wsRef.current.close();
-        }
+      if (!running) {
+        resolve();
+        return;
+      }
 
-        const ws = createWebSocketClient(sessionId);
-        ws.addEventListener('open', () => {
-          setConnectionState(ConnectionState.CONNECTED);
-        });
-        ws.addEventListener('message', (evt) => {
-          handleContent(JSON.parse(evt.data));
-        });
-        ws.addEventListener('error', (err) => {
-          reject(err);
-        });
-        ws.addEventListener('close', () => {
-          setConnectionState(ConnectionState.DISCONNECTED);
-          resolve();
-        });
-        setConnectionState(ConnectionState.CONNECTING);
+      if (wsRef.current) {
+        setConnectionState(ConnectionState.DISCONNECTED);
+        wsRef.current.close();
+      }
 
-        wsRef.current = ws;
-      }),
-    []
-  );
+      const ws = createWebSocketClient(sessionId);
+      ws.addEventListener('open', () => {
+        setConnectionState(ConnectionState.CONNECTED);
+      });
+      ws.addEventListener('message', (evt) => {
+        handleMessage(JSON.parse(evt.data));
+      });
+      ws.addEventListener('error', (err) => {
+        reject(err);
+      });
+      ws.addEventListener('close', () => {
+        setConnectionState(ConnectionState.DISCONNECTED);
+        resolve();
+      });
+      setConnectionState(ConnectionState.CONNECTING);
+
+      wsRef.current = ws;
+    });
 
   const esRef = useRef<EventSource>();
-  const setupEventStream = useCallback(
-    (sessionId: string) =>
-      new Promise((_, reject) => {
-        if (!getEnvBool('EVENT_STREAM_ENABLED')) {
-          reject('Event stream disabled');
-          return;
-        }
+  const setupEventStream = (sessionId: string) =>
+    new Promise((_, reject) => {
+      if (!eventStreamEnabled) {
+        reject('Event stream disabled');
+        return;
+      }
 
-        if (esRef.current) {
-          setConnectionState(ConnectionState.DISCONNECTED);
-          esRef.current.close();
-        }
+      if (!running) {
+        resolve();
+        return;
+      }
 
-        const es = createEventSourceClient(sessionId);
-        es.addEventListener('ping', () => {
-          setConnectionState(ConnectionState.CONNECTED);
-        });
-        es.addEventListener('content', (evt: MessageEvent) => {
-          handleContent(JSON.parse(evt.data));
-        });
-        es.addEventListener('error', reject);
-        setConnectionState(ConnectionState.CONNECTING);
+      if (esRef.current) {
+        setConnectionState(ConnectionState.DISCONNECTED);
+        esRef.current.close();
+      }
 
-        esRef.current = es;
-      }),
-    []
-  );
+      const es = createEventSourceClient(sessionId);
+      es.addEventListener('ping', () => {
+        setConnectionState(ConnectionState.CONNECTED);
+      });
+      es.addEventListener('message', (evt: MessageEvent) => {
+        handleMessage(JSON.parse(evt.data));
+      });
+      es.addEventListener('error', reject);
+      setConnectionState(ConnectionState.CONNECTING);
 
-  const doLongPolling = useCallback(async (sessionId: string) => {
+      esRef.current = es;
+    });
+
+  const doLongPolling = async (sessionId: string) => {
+    if (!running) return;
     let hasError = false;
     const start = new Date();
     try {
       setConnectionState(ConnectionState.CONNECTING);
       const resp = await lpClient.get(`/sessions/${sessionId}`);
-      setConnectionState(ConnectionState.CONNECTED);
-      const { data: content } = resp.data as RestResponse<Content>;
-      handleContent(content);
+      if (resp.status === 200) {
+        setConnectionState(ConnectionState.CONNECTED);
+        const { data: message } = resp.data as RestResponse<Message>;
+        handleMessage(message);
+      } else {
+        setConnectionState(ConnectionState.DISCONNECTED);
+      }
     } catch (err) {
       console.error(err);
       hasError = true;
@@ -148,15 +168,15 @@ export default function SessionPage() {
         doLongPolling(sessionId).then(resolve, reject);
       }, 3000);
     });
-  }, []);
+  };
 
   const query = router.query;
   const sessionId = query.id as string;
 
   const handleReload = () => {
     if (!sessionId) return;
-    setupApi(sessionId);
-    setupWebSocket(sessionId)
+    setupApi(sessionId)
+      .then(() => setupWebSocket(sessionId))
       .catch((err) => {
         console.error(err);
         return setupEventStream(sessionId);
@@ -168,7 +188,24 @@ export default function SessionPage() {
       .catch((err) => console.error(err));
   };
 
-  useEffect(handleReload, [sessionId]);
+  const handleDelete = () => {
+    setRunning(false);
+  };
+
+  useEffect(() => {
+    handleReload();
+    // Update timestamps every 30 seconds
+    const interval = setInterval(() => {
+      setTimestamp(new Date().getTime());
+    }, 30000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [sessionId]);
+
+  const messageComponents = map(messages, (message) => (
+    <SessionMessage key={message.id} timestamp={timestamp} message={message} />
+  ));
 
   return (
     <div className='container container-main space-y-4'>
@@ -184,10 +221,11 @@ export default function SessionPage() {
           sessionId={sessionId}
           qrImageApi={qrImageApi}
           onReload={handleReload}
+          onDelete={handleDelete}
         />
       </Card>
       <SessionForm api={sessionApi} sessionId={sessionId} />
-      <SessionContent content={content} />
+      {messageComponents}
     </div>
   );
 }

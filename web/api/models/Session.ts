@@ -1,8 +1,9 @@
-import Content from './Content';
+import Message from './Message';
 
 interface Session {
   id: string;
-  content: Content;
+  messages: Message[];
+  created_at: number;
 }
 
 export default Session;
