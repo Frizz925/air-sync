@@ -24,14 +24,18 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
     if (filled !== nextFilled) setFilled(nextFilled);
   };
 
-  const handleChange = useCallback(() => {
+  const handleValue = (value: string) => {
     const oldValue = valueRef.current;
-    const value = textRef.current.innerText.trim();
     if (oldValue === value) return;
     valueRef.current = value;
     handleFilled(value);
     if (onChange) onChange(value);
-  }, [onChange]);
+  };
+
+  const handleChange = useCallback(() => {
+    const value = textRef.current.innerText.trim();
+    handleValue(value);
+  }, [handleValue]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
@@ -39,6 +43,7 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
       e.stopPropagation();
       const value = e.clipboardData.getData('text/plain');
       document.execCommand('inserttext', false, value);
+      handleValue(value);
     },
     [handleChange]
   );
