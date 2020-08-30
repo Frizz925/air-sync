@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"air-sync/models"
 	repos "air-sync/repositories"
 	"air-sync/subscribers/events"
 	"air-sync/util/pubsub"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
@@ -63,19 +64,44 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 	}
 
 	topic := h.stream.Topic(events.SessionEventName(id))
-	if err := topic.ForEach(h.HandleStream(rwf, session)); err != nil {
-		logger.Error(err)
-		return
+	if err := h.HandleStream(rwf, req, topic); err != nil {
+		if err != io.EOF {
+			logger.Error(err)
+		}
 	}
 }
 
-func (h *StreamingHandler) HandleStream(rwf ResponseWriteFlusher, session *models.Session) pubsub.SubscribeFunc {
-	return func(v interface{}) error {
-		b, err := json.Marshal(v)
-		if err != nil {
-			return err
+func (h *StreamingHandler) HandleStream(rwf ResponseWriteFlusher, req *http.Request, topic *pubsub.Topic) error {
+	sub := topic.Subscribe()
+	defer sub.Unsubscribe()
+
+	ctx := req.Context()
+	ch := sub.Observe()
+	for {
+		timeout := time.After(30 * time.Second)
+		select {
+		case item := <-ch:
+			if item.E != nil {
+				if item.E != pubsub.ErrStreamClosed {
+					return item.E
+				} else {
+					return nil
+				}
+			}
+			b, err := json.Marshal(item.V)
+			if err != nil {
+				return err
+			}
+			if err := h.SendEvent(rwf, "message", string(b)); err != nil {
+				return err
+			}
+		case <-timeout:
+			if err := h.SendEvent(rwf, "ping", ""); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
 		}
-		return h.SendEvent(rwf, "message", string(b))
 	}
 }
 

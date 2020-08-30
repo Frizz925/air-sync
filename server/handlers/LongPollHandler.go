@@ -39,6 +39,7 @@ func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, er
 	logger.Info("Started long-polling session")
 	defer logger.Info("Long-polling session ended")
 
+	ctx := req.Context()
 	sub := h.stream.Topic(events.SessionEventName(id)).Subscribe()
 	defer sub.Unsubscribe()
 
@@ -55,6 +56,7 @@ func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, er
 			}, nil
 		}
 	case <-timeout:
+	case <-ctx.Done():
 	}
 
 	return &util.RestResponse{

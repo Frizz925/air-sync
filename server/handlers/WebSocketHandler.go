@@ -6,7 +6,10 @@ import (
 	"air-sync/subscribers/events"
 	"air-sync/util"
 	"air-sync/util/pubsub"
+	"context"
+	"io"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -80,17 +83,80 @@ func (h *WebSocketHandler) SetupWS(w http.ResponseWriter, req *http.Request) {
 		request: req,
 		logger:  logger,
 	}
+	ws.Setup()
 	if err := ws.Start(); err != nil {
-		logger.Error(err)
+		if err != io.EOF {
+			logger.Error(err)
+		}
 	}
+}
+
+func (ws *WebSocketSession) Setup() {
+	ws.conn.SetPingHandler(nil)
+	ws.conn.SetPongHandler(nil)
+	ws.conn.SetCloseHandler(nil)
 }
 
 func (ws *WebSocketSession) Start() error {
 	ws.logger.WithField("session_id", ws.Id).Info("New WebSocket client connected")
 	defer ws.logger.WithField("session_id", ws.Id).Info("WebSocket client disconnected")
-	return ws.ForEach(func(v interface{}) error {
-		return ws.conn.WriteJSON(v)
-	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		if err := ws.HandleReads(); err != nil {
+			if _, ok := err.(*websocket.CloseError); !ok {
+				ws.logger.Error(err)
+			}
+		}
+		cancel()
+	}()
+
+	sub := ws.Subscribe()
+	defer sub.Unsubscribe()
+
+	ch := sub.Observe()
+	for {
+		timeout := time.After(30 * time.Second)
+		select {
+		case item := <-ch:
+			if item.E != nil {
+				if item.E != pubsub.ErrStreamClosed {
+					return item.E
+				} else {
+					return nil
+				}
+			}
+			err := ws.conn.WriteJSON(item.V)
+			if err != nil {
+				return err
+			}
+		case <-timeout:
+			err := ws.conn.WriteMessage(websocket.PingMessage, []byte(""))
+			if err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ws *WebSocketSession) HandleReads() error {
+	for {
+		messageType, _, err := ws.conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+		switch messageType {
+		case websocket.PingMessage:
+			err := ws.conn.WriteMessage(websocket.PongMessage, []byte(""))
+			if err != nil {
+				return err
+			}
+		case websocket.CloseMessage:
+			return nil
+		}
+	}
 }
 
 func acceptAllOrigin(_ *http.Request) bool {
