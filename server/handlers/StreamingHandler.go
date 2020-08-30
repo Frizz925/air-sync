@@ -58,7 +58,7 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 	w.Header().Set("Connection", "keep-alive")
 	w.WriteHeader(200)
 
-	if err := h.SendEvent(rwf, "ping", ""); err != nil {
+	if err := h.SendEvent(rwf, "heartbeat", ""); err != nil {
 		logger.Error(err)
 		return
 	}
@@ -66,6 +66,10 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 	topic := h.stream.Topic(events.SessionEventName(id))
 	if err := h.HandleStream(rwf, req, topic); err != nil {
 		if err != io.EOF {
+			logger.Error(err)
+		}
+	} else {
+		if err := h.SendEvent(rwf, "close", ""); err != nil {
 			logger.Error(err)
 		}
 	}
@@ -96,7 +100,7 @@ func (h *StreamingHandler) HandleStream(rwf ResponseWriteFlusher, req *http.Requ
 				return err
 			}
 		case <-timeout:
-			if err := h.SendEvent(rwf, "ping", ""); err != nil {
+			if err := h.SendEvent(rwf, "heartbeat", ""); err != nil {
 				return err
 			}
 		case <-ctx.Done():
