@@ -7,6 +7,7 @@ export class NotificationHelper {
   public initialize() {
     if (!process.browser) return;
     if (!notificationEnabled) return;
+    if (!('Notification' in window)) return;
     Notification.requestPermission().then(
       (result) => {
         this.notificationAllowed = result === 'granted';
