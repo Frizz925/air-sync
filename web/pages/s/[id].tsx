@@ -210,7 +210,10 @@ export default function SessionPage() {
       .catch((err) => console.error(err));
   };
 
-  const handleDelete = () => setRunning(false);
+  const handleDelete = () => {
+    setRunning(false);
+    router.push('/');
+  };
 
   useEffect(() => {
     handleReload();
