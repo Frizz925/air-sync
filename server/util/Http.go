@@ -19,6 +19,11 @@ type Response struct {
 	Body        []byte
 }
 
+type JsonResponse struct {
+	StatusCode int
+	Result     interface{}
+}
+
 type RestResponse struct {
 	Status     string      `json:"status"`
 	StatusCode int         `json:"-"`
@@ -37,14 +42,16 @@ var (
 		StatusCode: http.StatusOK,
 		Status:     "success",
 	}
+	SuccessJsonResponse = &JsonResponse{
+		StatusCode: http.StatusOK,
+	}
 	SuccessResponse = &Response{
-		StatusCode:  http.StatusOK,
-		ContentType: "text/plain",
-		Body:        []byte("Success"),
+		StatusCode: http.StatusOK,
 	}
 )
 
 type RequestHandlerFunc func(req *http.Request) (*Response, error)
+type JsonHandlerFunc func(req *http.Request) (*JsonResponse, error)
 type RestHandlerFunc func(req *http.Request) (*RestResponse, error)
 
 func WrapHandlerFunc(handler RequestHandlerFunc) http.HandlerFunc {
@@ -61,18 +68,40 @@ func WrapHandlerFunc(handler RequestHandlerFunc) http.HandlerFunc {
 		if res.StatusCode <= 0 {
 			res.StatusCode = SuccessResponse.StatusCode
 		}
-		if res.ContentType == "" {
-			res.ContentType = SuccessResponse.ContentType
-		}
-		if res.Body == nil {
-			res.Body = SuccessResponse.Body
-		}
 		WriteResponse(w, req, res)
 	}
 }
 
-func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
+func WrapJsonHandlerFunc(handler JsonHandlerFunc) http.HandlerFunc {
 	return WrapHandlerFunc(func(req *http.Request) (*Response, error) {
+		res, err := handler(req)
+		if err != nil {
+			return nil, err
+		}
+		if res == nil {
+			res = SuccessJsonResponse
+		}
+		if res.StatusCode <= 0 {
+			res.StatusCode = SuccessJsonResponse.StatusCode
+		}
+		body := []byte{}
+		if res.Result != nil {
+			b, err := json.Marshal(res.Result)
+			if err != nil {
+				return nil, err
+			}
+			body = b
+		}
+		return &Response{
+			StatusCode:  res.StatusCode,
+			ContentType: "application/json;charset=utf-8",
+			Body:        body,
+		}, nil
+	})
+}
+
+func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
+	return WrapJsonHandlerFunc(func(req *http.Request) (*JsonResponse, error) {
 		res, err := handler(req)
 		if err != nil {
 			res = &RestResponse{
@@ -97,14 +126,9 @@ func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
 				res.Status = "error"
 			}
 		}
-		b, err := json.Marshal(res)
-		if err != nil {
-			return nil, err
-		}
-		return &Response{
-			StatusCode:  res.StatusCode,
-			ContentType: "application/json;charset=utf-8",
-			Body:        b,
+		return &JsonResponse{
+			StatusCode: res.StatusCode,
+			Result:     res,
 		}, nil
 	})
 }
@@ -135,7 +159,9 @@ func CreateRestResponse(data interface{}) *RestResponse {
 }
 
 func WriteResponse(w http.ResponseWriter, req *http.Request, res *Response) {
-	w.Header().Set("Content-Type", res.ContentType)
+	if res.ContentType != "" {
+		w.Header().Set("Content-Type", res.ContentType)
+	}
 	w.WriteHeader(res.StatusCode)
 	if _, err := w.Write(res.Body); err != nil {
 		switch err {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"air-sync/models/formatters"
 	repos "air-sync/repositories"
 	"air-sync/subscribers/events"
 	"air-sync/util/pubsub"
@@ -92,7 +93,11 @@ func (h *StreamingHandler) HandleStream(rwf ResponseWriteFlusher, req *http.Requ
 					return nil
 				}
 			}
-			b, err := json.Marshal(item.V)
+			v, ok := item.V.(events.SessionEvent)
+			if !ok {
+				continue
+			}
+			b, err := json.Marshal(formatters.FromSessionEvent(v))
 			if err != nil {
 				return err
 			}

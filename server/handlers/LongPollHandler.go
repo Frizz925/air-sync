@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"air-sync/models/formatters"
 	repos "air-sync/repositories"
 	"air-sync/subscribers/events"
 	"air-sync/util"
@@ -24,14 +25,14 @@ func NewLongPollHandler(repo repos.SessionRepository, stream *pubsub.Stream) *Lo
 }
 
 func (h *LongPollHandler) RegisterRoutes(r *mux.Router) {
-	r.HandleFunc("/lp/sessions/{id}", util.WrapRestHandlerFunc(h.PollSession)).Methods("GET")
+	r.HandleFunc("/lp/sessions/{id}", util.WrapJsonHandlerFunc(h.PollSession)).Methods("GET")
 }
 
-func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, error) {
+func (h *LongPollHandler) PollSession(req *http.Request) (*util.JsonResponse, error) {
 	id := mux.Vars(req)["id"]
 	session, err := h.repo.Get(id)
 	if err != nil {
-		return h.HandleSessionRestError(err)
+		return nil, err
 	}
 	logger := util.RequestLogger(req)
 	h.ApplySessionLogger(logger, session)
@@ -50,18 +51,17 @@ func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, er
 			if err != pubsub.ErrStreamClosed {
 				return nil, err
 			}
-		} else {
-			return &util.RestResponse{
-				Data: item.V,
+		}
+		if v, ok := item.V.(events.SessionEvent); ok {
+			return &util.JsonResponse{
+				Result: formatters.FromSessionEvent(v),
 			}, nil
 		}
 	case <-timeout:
 	case <-ctx.Done():
 	}
 
-	return &util.RestResponse{
+	return &util.JsonResponse{
 		StatusCode: 204,
-		Status:     "success",
-		Message:    "No message received in time",
 	}, nil
 }

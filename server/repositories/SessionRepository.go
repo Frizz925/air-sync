@@ -5,11 +5,15 @@ import (
 	"errors"
 )
 
-var ErrSessionNotFound = errors.New("Session not found")
+var (
+	ErrSessionNotFound = errors.New("Session not found")
+	ErrMessageNotFound = errors.New("Message not found")
+)
 
 type SessionRepository interface {
 	Create() (*models.Session, error)
 	Get(id string) (*models.Session, error)
-	Update(id string, message models.Message) error
+	InsertMessage(id string, message models.Message) error
+	DeleteMessage(id string, messageId string) error
 	Delete(id string) error
 }

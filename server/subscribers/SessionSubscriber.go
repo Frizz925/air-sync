@@ -1,7 +1,6 @@
 package subscribers
 
 import (
-	repos "air-sync/repositories"
 	"air-sync/subscribers/events"
 	"air-sync/util/pubsub"
 
@@ -9,17 +8,16 @@ import (
 )
 
 type sessionSubscriber struct {
-	repo   repos.SessionRepository
 	stream *pubsub.Stream
 }
 
-func SubscribeSession(repo repos.SessionRepository, stream *pubsub.Stream) {
+func SubscribeSession(stream *pubsub.Stream) {
 	sub := &sessionSubscriber{
-		repo:   repo,
 		stream: stream,
 	}
-	sub.handleAsync(events.SessionUpdateEventName, sub.handleUpdate)
-	sub.handleAsync(events.SessionDeleteEventName, sub.handleDelete)
+	sub.handleAsync(events.SessionDeleted, sub.handleSessionDelete)
+	sub.handleAsync(events.MessageInserted, sub.handleMessageInsert)
+	sub.handleAsync(events.MessageDeleted, sub.handleMessageDelete)
 }
 
 func (s *sessionSubscriber) handleAsync(name string, handler func(v interface{}) error) {
@@ -31,19 +29,29 @@ func (s *sessionSubscriber) handleAsync(name string, handler func(v interface{})
 	}()
 }
 
-func (s *sessionSubscriber) handleUpdate(v interface{}) error {
-	if evt, ok := v.(events.SessionUpdate); ok {
-		s.sessionTopic(evt.Id).Fire(evt.Message)
-		return s.repo.Update(evt.Id, evt.Message)
+func (s *sessionSubscriber) handleSessionDelete(v interface{}) error {
+	if evt, ok := v.(events.SessionDelete); ok {
+		s.sessionTopic(string(evt)).Shutdown()
 	}
 	return nil
 }
 
-func (s *sessionSubscriber) handleDelete(v interface{}) error {
-	if evt, ok := v.(events.SessionDelete); ok {
-		id := string(evt)
-		s.sessionTopic(id).Shutdown()
-		return s.repo.Delete(id)
+func (s *sessionSubscriber) handleMessageInsert(v interface{}) error {
+	if evt, ok := v.(events.MessageInsert); ok {
+		s.sessionTopic(evt.SessionId).Fire(events.SessionEvent{
+			Event: events.MessageInserted,
+			Value: evt.Message,
+		})
+	}
+	return nil
+}
+
+func (s *sessionSubscriber) handleMessageDelete(v interface{}) error {
+	if evt, ok := v.(events.MessageDelete); ok {
+		s.sessionTopic(evt.SessionId).Fire(events.SessionEvent{
+			Event: events.MessageDeleted,
+			Value: evt.MessageId,
+		})
 	}
 	return nil
 }

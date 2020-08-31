@@ -21,7 +21,7 @@ func (s *MonolithicService) Start(ctx context.Context) error {
 	repo := repos.NewSessionLocalRepository()
 	stream := pubsub.NewStream()
 	defer stream.Shutdown()
-	subscribers.SubscribeSession(repo, stream)
+	subscribers.SubscribeSession(stream)
 
 	router := mux.NewRouter()
 	handlers.NewApiHandler(

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"air-sync/models"
+	"air-sync/models/formatters"
 	repos "air-sync/repositories"
 	"air-sync/subscribers/events"
 	"air-sync/util"
@@ -126,7 +127,11 @@ func (ws *WebSocketSession) Start() error {
 					return nil
 				}
 			}
-			err := ws.conn.WriteJSON(item.V)
+			v, ok := item.V.(events.SessionEvent)
+			if !ok {
+				continue
+			}
+			err := ws.conn.WriteJSON(formatters.FromSessionEvent(v))
 			if err != nil {
 				return err
 			}
