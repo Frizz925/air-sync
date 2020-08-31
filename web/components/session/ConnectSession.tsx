@@ -39,7 +39,7 @@ const ConnectSession: React.FC<ConnectionSessionProps> = ({ api, connect }) => {
       <Button color='primary' className='rounded-full' onClick={handleConnect}>
         Connect
       </Button>
-      <div className='text-red-700 text-sm font-semibold'>{error}</div>
+      <div className='text-red-700 text-sm'>{error}</div>
     </div>
   );
 };
