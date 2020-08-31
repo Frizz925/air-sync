@@ -1,5 +1,5 @@
 import Message from '@/api/models/Message';
-import RestResponse from '@/api/models/RestResponse';
+import SessionEvent from '@/api/models/SessionEvent';
 import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
 import {
@@ -54,6 +54,25 @@ export default function SessionPage() {
     messagesRef.current = newMessages;
   };
 
+  const handleDeletedMessage = (messageId: string) => {
+    const newMessages = [...messagesRef.current].filter(
+      (message) => message.id !== messageId
+    );
+    setMessages(newMessages);
+    messagesRef.current = newMessages;
+  };
+
+  const handleSessionEvent = ({ event: name, data }: SessionEvent<any>) => {
+    switch (name) {
+      case 'message/insert':
+        handleMessage(data as Message);
+        break;
+      case 'message/delete':
+        handleDeletedMessage(data as string);
+        break;
+    }
+  };
+
   const setupApi = async (sessionId: string) => {
     try {
       const {
@@ -88,8 +107,8 @@ export default function SessionPage() {
       ws.addEventListener('open', () => {
         setConnectionState(ConnectionState.CONNECTED);
       });
-      ws.addEventListener('message', (evt) => {
-        handleMessage(JSON.parse(evt.data));
+      ws.addEventListener('message', (e) => {
+        handleSessionEvent(JSON.parse(e.data));
       });
       ws.addEventListener('error', (err) => {
         reject(err);
@@ -122,11 +141,15 @@ export default function SessionPage() {
       }
 
       const es = createEventSourceClient(sessionId);
-      es.addEventListener('ping', () => {
+      es.addEventListener('heartbeat', () => {
         setConnectionState(ConnectionState.CONNECTED);
       });
-      es.addEventListener('message', (evt: MessageEvent) => {
-        handleMessage(JSON.parse(evt.data));
+      es.addEventListener('message', (e: MessageEvent) => {
+        handleSessionEvent(JSON.parse(e.data));
+      });
+      es.addEventListener('close', () => {
+        setConnectionState(ConnectionState.DISCONNECTED);
+        es.close();
       });
       es.addEventListener('error', reject);
       setConnectionState(ConnectionState.CONNECTING);
@@ -139,16 +162,14 @@ export default function SessionPage() {
     let hasError = false;
     const start = new Date();
     try {
-      setConnectionState(ConnectionState.CONNECTING);
+      setConnectionState(ConnectionState.CONNECTED);
       const resp = await lpClient.get(`/sessions/${sessionId}`);
       if (resp.status === 200) {
-        setConnectionState(ConnectionState.CONNECTED);
-        const { data: message } = resp.data as RestResponse<Message>;
-        handleMessage(message);
-      } else {
-        setConnectionState(ConnectionState.DISCONNECTED);
+        const event = resp.data as SessionEvent<unknown>;
+        handleSessionEvent(event);
       }
     } catch (err) {
+      setConnectionState(ConnectionState.DISCONNECTED);
       console.error(err);
       hasError = true;
     }
@@ -175,6 +196,7 @@ export default function SessionPage() {
 
   const handleReload = () => {
     if (!sessionId) return;
+    setConnectionState(ConnectionState.CONNECTING);
     setupApi(sessionId)
       .then(() => setupWebSocket(sessionId))
       .catch((err) => {
@@ -188,9 +210,7 @@ export default function SessionPage() {
       .catch((err) => console.error(err));
   };
 
-  const handleDelete = () => {
-    setRunning(false);
-  };
+  const handleDelete = () => setRunning(false);
 
   useEffect(() => {
     handleReload();
@@ -204,7 +224,13 @@ export default function SessionPage() {
   }, [sessionId]);
 
   const messageComponents = map(messages, (message) => (
-    <SessionMessage key={message.id} timestamp={timestamp} message={message} />
+    <SessionMessage
+      key={message.id}
+      api={sessionApi}
+      sessionId={sessionId}
+      message={message}
+      timestamp={timestamp}
+    />
   ));
 
   return (

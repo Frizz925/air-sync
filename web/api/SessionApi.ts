@@ -23,4 +23,9 @@ export default class SessionApi extends RestApi {
     const { data } = await this.client.put(`/sessions/${id}`, message);
     return data as RestResponse<undefined>;
   }
+
+  public async deleteMessage(id: string, messageId: string) {
+    const { data } = await this.client.delete(`/sessions/${id}/${messageId}`);
+    return data as RestResponse<undefined>;
+  }
 }

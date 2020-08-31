@@ -1,4 +1,4 @@
-import { DefaultMessage } from '@/api/models/Message';
+import Message, { DefaultMessage } from '@/api/models/Message';
 import SessionApi from '@/api/SessionApi';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
@@ -32,7 +32,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
     try {
       const message = DefaultMessage();
       message.content = textMessage;
-      await api.sendMessage(sessionId, message);
+      await api.sendMessage(sessionId, message as Message);
       resetForm();
     } catch (err) {
       console.error(err);

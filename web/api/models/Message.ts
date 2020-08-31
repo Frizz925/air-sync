@@ -1,12 +1,12 @@
 interface Message {
-  id?: string;
+  id: string;
   type: string;
   mime: string;
   content: string;
   created_at: number;
 }
 
-export const DefaultMessage = (): Message => ({
+export const DefaultMessage = (): Partial<Message> => ({
   type: 'text',
   mime: 'text/plain',
   content: '',

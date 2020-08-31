@@ -1,14 +1,17 @@
 import Message from '@/api/models/Message';
+import SessionApi from '@/api/SessionApi';
 import Card from '@/components/common/Card';
 import IconButton from '@/components/common/IconButton';
 import * as Clipboard from '@/utils/Clipboard';
-import { faCopy } from '@fortawesome/free-regular-svg-icons';
+import { faCopy, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import moment from 'moment';
 import React from 'react';
 
 export interface SessionMessageProps {
-  timestamp: number;
+  api: SessionApi;
+  sessionId: string;
   message: Message;
+  timestamp: number;
 }
 
 const formatTimestamp = (ts: number) => {
@@ -20,29 +23,36 @@ const formatShortTimestamp = (from: number, ts: number) => {
 };
 
 const SessionMessage: React.FC<SessionMessageProps> = ({
-  timestamp,
+  api,
+  sessionId,
   message,
+  timestamp,
 }) => {
-  const handleCopy = () => {
-    Clipboard.copy(message.content);
+  const handleCopy = () => Clipboard.copy(message.content);
+
+  const handleDelete = async () => {
+    try {
+      await api.deleteMessage(sessionId, message.id);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
-    <Card className='px-2 py-2 text-sm whitespace-pre-wrap'>
-      <div className='flex justify-start items-start'>
-        <div>
-          <div
-            className='text-xs opacity-50 cursor-default'
-            title={formatTimestamp(message.created_at)}
-          >
-            {formatShortTimestamp(timestamp, message.created_at)}
-          </div>
-          <div>{message.content}</div>
+    <Card className='text-sm whitespace-pre-wrap'>
+      <div className='px-2 pt-2'>
+        <div
+          className='text-xs opacity-50 cursor-default'
+          title={formatTimestamp(message.created_at)}
+        >
+          {formatShortTimestamp(timestamp, message.created_at)}
         </div>
+        <div>{message.content}</div>
+      </div>
+      <div className='flex justify-start items-stretch px-1 py-1'>
+        <IconButton icon={faCopy} onClick={handleCopy} />
         <div className='flex-grow'></div>
-        <div>
-          <IconButton icon={faCopy} onClick={handleCopy} />
-        </div>
+        <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
       </div>
     </Card>
   );
