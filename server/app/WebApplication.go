@@ -11,15 +11,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type WebService struct {
+type WebApplication struct {
 	Addr       string
 	Router     *mux.Router
 	EnableCORS bool
 }
 
-var _ Service = (*WebService)(nil)
+var _ Application = (*WebApplication)(nil)
 
-func (s *WebService) Start(ctx context.Context) error {
+func (s *WebApplication) Start(ctx context.Context) error {
 	err := s.Router.Walk(func(r *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		t, err := r.GetPathTemplate()
 		if err != nil {

@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"air-sync/models"
 	repos "air-sync/repositories"
-	"air-sync/repositories/entities"
 	"air-sync/util"
 	"air-sync/util/logging"
 	"air-sync/util/pubsub"
@@ -31,7 +31,7 @@ type SessionHandler struct {
 	stream *pubsub.Stream
 }
 
-type SessionHandlerFunc func(req *http.Request, session entities.Session) (interface{}, error)
+type SessionHandlerFunc func(req *http.Request, session models.Session) (interface{}, error)
 
 func NewSessionHandler(repo repos.SessionRepository, stream *pubsub.Stream) *SessionHandler {
 	return &SessionHandler{
@@ -40,13 +40,13 @@ func NewSessionHandler(repo repos.SessionRepository, stream *pubsub.Stream) *Ses
 	}
 }
 
-func (h *SessionHandler) CreateSessionLogger(req *http.Request, session entities.Session) *log.Logger {
+func (h *SessionHandler) CreateSessionLogger(req *http.Request, session models.Session) *log.Logger {
 	logger := util.CreateRequestLogger(req)
 	h.ApplySessionLogger(logger, session)
 	return logger
 }
 
-func (h *SessionHandler) ApplySessionLogger(logger *log.Logger, session entities.Session) {
+func (h *SessionHandler) ApplySessionLogger(logger *log.Logger, session models.Session) {
 	logger.Formatter = logging.NewSessionLogFormatter(logger.Formatter, session)
 }
 
@@ -80,7 +80,10 @@ func (h *SessionHandler) HandleSessionRestError(err error) (*util.RestResponse, 
 
 func (h *SessionHandler) HandleSessionError(w http.ResponseWriter, err error) {
 	code := http.StatusInternalServerError
-	if err == repos.ErrSessionNotFound {
+	switch err {
+	case repos.ErrSessionNotFound:
+		code = http.StatusNotFound
+	case repos.ErrMessageNotFound:
 		code = http.StatusNotFound
 	}
 	http.Error(w, err.Error(), code)

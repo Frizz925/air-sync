@@ -25,14 +25,14 @@ func NewLongPollHandler(repo repos.SessionRepository, stream *pubsub.Stream) *Lo
 }
 
 func (h *LongPollHandler) RegisterRoutes(r *mux.Router) {
-	r.HandleFunc("/lp/sessions/{id}", util.WrapJsonHandlerFunc(h.PollSession)).Methods("GET")
+	r.HandleFunc("/lp/sessions/{id}", util.WrapRestHandlerFunc(h.PollSession)).Methods("GET")
 }
 
-func (h *LongPollHandler) PollSession(req *http.Request) (*util.JsonResponse, error) {
+func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, error) {
 	id := mux.Vars(req)["id"]
 	session, err := h.repo.Find(id)
 	if err != nil {
-		return nil, err
+		return h.HandleSessionRestError(err)
 	}
 	logger := util.RequestLogger(req)
 	h.ApplySessionLogger(logger, session)
@@ -53,15 +53,16 @@ func (h *LongPollHandler) PollSession(req *http.Request) (*util.JsonResponse, er
 			}
 		}
 		if v, ok := item.V.(events.SessionEvent); ok {
-			return &util.JsonResponse{
-				Result: formatters.FromSessionEvent(v),
+			return &util.RestResponse{
+				Message: "New session event",
+				Data:    formatters.FromSessionEvent(v),
 			}, nil
 		}
 	case <-timeout:
 	case <-ctx.Done():
 	}
 
-	return &util.JsonResponse{
-		StatusCode: 204,
+	return &util.RestResponse{
+		StatusCode: http.StatusNoContent,
 	}, nil
 }

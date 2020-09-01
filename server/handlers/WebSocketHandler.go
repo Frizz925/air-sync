@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"air-sync/models"
 	"air-sync/models/formatters"
 	repos "air-sync/repositories"
-	"air-sync/repositories/entities"
 	"air-sync/subscribers/events"
 	"air-sync/util"
 	"air-sync/util/pubsub"
@@ -30,7 +30,7 @@ type WebSocketHandlerOptions struct {
 }
 
 type WebSocketSession struct {
-	entities.Session
+	models.Session
 	*pubsub.Topic
 	conn    *websocket.Conn
 	request *http.Request

@@ -1,7 +1,8 @@
 package repositories
 
 import (
-	"air-sync/repositories/entities"
+	"air-sync/models"
+	"air-sync/models/orm"
 	"errors"
 
 	"gorm.io/gorm"
@@ -19,23 +20,23 @@ func NewAttachmentSqlRepository(db *gorm.DB) *AttachmentSqlRepository {
 }
 
 func (r *AttachmentSqlRepository) Migrate() error {
-	return r.db.AutoMigrate(entities.Attachment{})
+	return r.db.AutoMigrate(orm.Attachment{})
 }
 
-func (r *AttachmentSqlRepository) Create(arg entities.CreateAttachment) (entities.Attachment, error) {
-	attachment := entities.FromCreateAttachment(arg)
+func (r *AttachmentSqlRepository) Create(arg models.CreateAttachment) (models.Attachment, error) {
+	attachment := orm.FromCreateAttachmentModel(arg)
 	err := r.db.Create(&attachment).Error
-	return attachment, r.crudError(err)
+	return orm.ToAttachmentModel(attachment), r.crudError(err)
 }
 
-func (r *AttachmentSqlRepository) Find(id string) (entities.Attachment, error) {
-	attachment := entities.Attachment{}
-	err := r.db.First(&attachment).Error
-	return attachment, r.crudError(err)
+func (r *AttachmentSqlRepository) Find(id string) (models.Attachment, error) {
+	attachment := orm.Attachment{}
+	err := r.db.First(&attachment, id).Error
+	return orm.ToAttachmentModel(attachment), r.crudError(err)
 }
 
 func (r *AttachmentSqlRepository) Delete(id string) error {
-	err := r.db.Delete(entities.Attachment{}, id).Error
+	err := r.db.Delete(orm.Attachment{}, id).Error
 	return r.crudError(err)
 }
 

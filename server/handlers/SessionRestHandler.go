@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"air-sync/models"
-	"air-sync/models/formatters"
-	"air-sync/repositories/entities"
-	"air-sync/services"
+	repos "air-sync/repositories"
 	"air-sync/subscribers/events"
 	"air-sync/util"
 	"air-sync/util/pubsub"
@@ -21,9 +19,9 @@ type SessionRestHandler struct {
 
 var _ RouteHandler = (*SessionRestHandler)(nil)
 
-func NewSessionRestHandler(repoSrv services.RepositoryService, stream *pubsub.Stream) *SessionRestHandler {
+func NewSessionRestHandler(repo repos.SessionRepository, stream *pubsub.Stream) *SessionRestHandler {
 	return &SessionRestHandler{
-		SessionHandler: NewSessionHandler(repoSrv.SessionRepository(), stream),
+		SessionHandler: NewSessionHandler(repo, stream),
 	}
 }
 
@@ -48,8 +46,8 @@ func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestRespons
 	}, nil
 }
 
-func (h *SessionRestHandler) GetSession(req *http.Request, session entities.Session) (interface{}, error) {
-	return formatters.SessionFromEntity(session), nil
+func (h *SessionRestHandler) GetSession(req *http.Request, session models.Session) (interface{}, error) {
+	return session, nil
 }
 
 func (h *SessionRestHandler) DeleteSession(req *http.Request) (*util.RestResponse, error) {
@@ -66,25 +64,25 @@ func (h *SessionRestHandler) DeleteSession(req *http.Request) (*util.RestRespons
 
 func (h *SessionRestHandler) InsertMessage(req *http.Request) (*util.RestResponse, error) {
 	id := mux.Vars(req)["id"]
-	payload := models.Message{}
+	insert := models.InsertMessage{}
 	dec := json.NewDecoder(req.Body)
-	if err := dec.Decode(&payload); err != nil {
+	if err := dec.Decode(&insert); err != nil {
 		return nil, err
 	}
-	if payload.Body == "" && payload.AttachmentID == "" {
+	if insert.Body == "" && insert.AttachmentID == "" {
 		return &util.RestResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    "Malformed request",
 			Error:      "Message body and attachment are empty",
 		}, nil
 	}
-	message, err := h.repo.InsertMessage(id, payload)
+	message, err := h.repo.InsertMessage(id, insert)
 	if err != nil {
 		return h.HandleSessionRestError(err)
 	}
 	h.stream.Topic(events.MessageInserted).Fire(events.MessageInsert{
 		SessionId: id,
-		Message:   formatters.MessageFromEntity(message),
+		Message:   message,
 	})
 	util.RequestLogger(req).WithFields(log.Fields{
 		"session_id": id,

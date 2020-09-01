@@ -44,7 +44,7 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 	}
 
 	id := mux.Vars(req)["id"]
-	session, err := h.repo.Get(id)
+	session, err := h.repo.Find(id)
 	if err != nil {
 		h.HandleSessionError(w, err)
 		return

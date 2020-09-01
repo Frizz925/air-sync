@@ -126,6 +126,15 @@ func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
 				res.Status = "error"
 			}
 		}
+		if res.Message == "" {
+			if res.StatusCode >= 500 {
+				res.Message = "Internal server error"
+			} else if res.StatusCode >= 400 {
+				res.Message = "Invalid request error"
+			} else {
+				res.Message = "OK"
+			}
+		}
 		return &JsonResponse{
 			StatusCode: res.StatusCode,
 			Result:     res,
@@ -163,11 +172,10 @@ func WriteResponse(w http.ResponseWriter, req *http.Request, res *Response) {
 		w.Header().Set("Content-Type", res.ContentType)
 	}
 	w.WriteHeader(res.StatusCode)
+	if res.Body == nil || res.StatusCode == http.StatusNoContent {
+		return
+	}
 	if _, err := w.Write(res.Body); err != nil {
-		switch err {
-		case http.ErrBodyNotAllowed:
-		default:
-			RequestLogger(req).Error(err)
-		}
+		RequestLogger(req).Error(err)
 	}
 }

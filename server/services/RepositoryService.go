@@ -6,4 +6,5 @@ import (
 
 type RepositoryService interface {
 	SessionRepository() repos.SessionRepository
+	AttachmentRepository() repos.AttachmentRepository
 }

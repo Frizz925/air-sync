@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"air-sync/models"
-	"air-sync/repositories/entities"
+	"air-sync/models/orm"
 	"errors"
 
 	"gorm.io/gorm"
@@ -20,35 +20,35 @@ func NewSessionSqlRepository(db *gorm.DB) *SessionSqlRepository {
 }
 
 func (r *SessionSqlRepository) Migrate() error {
-	if err := r.db.AutoMigrate(entities.Session{}); err != nil {
+	if err := r.db.AutoMigrate(orm.Session{}); err != nil {
 		return err
 	}
-	if err := r.db.AutoMigrate(entities.Message{}); err != nil {
+	if err := r.db.AutoMigrate(orm.Message{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *SessionSqlRepository) Create() (entities.Session, error) {
-	session := entities.NewSession()
+func (r *SessionSqlRepository) Create() (models.Session, error) {
+	session := orm.NewSession()
 	err := r.db.Create(&session).Error
-	return session, r.sessionCrudError(err)
+	return orm.ToSessionModel(session), r.sessionCrudError(err)
 }
 
-func (r *SessionSqlRepository) Find(id string) (entities.Session, error) {
-	session := entities.Session{}
+func (r *SessionSqlRepository) Find(id string) (models.Session, error) {
+	session := orm.Session{}
 	err := r.db.First(&session, id).Error
-	return session, r.sessionCrudError(err)
+	return orm.ToSessionModel(session), r.sessionCrudError(err)
 }
 
-func (r *SessionSqlRepository) InsertMessage(id string, model models.Message) (entities.Message, error) {
-	message := entities.FromMessageModel(id, model)
+func (r *SessionSqlRepository) InsertMessage(id string, arg models.InsertMessage) (models.Message, error) {
+	message := orm.FromInsertMessageModel(id, arg)
 	err := r.db.Create(&message).Error
-	return message, r.messageCrudError(err)
+	return orm.ToMessageModel(message), r.messageCrudError(err)
 }
 
 func (r *SessionSqlRepository) DeleteMessage(id string, messageId string) error {
-	err := r.db.Delete(entities.Message{
+	err := r.db.Delete(orm.Message{
 		ID:        messageId,
 		SessionID: id,
 	}).Error
@@ -56,7 +56,7 @@ func (r *SessionSqlRepository) DeleteMessage(id string, messageId string) error 
 }
 
 func (r *SessionSqlRepository) Delete(id string) error {
-	err := r.db.Delete(entities.Session{}, id).Error
+	err := r.db.Delete(orm.Session{}, id).Error
 	return r.sessionCrudError(err)
 }
 

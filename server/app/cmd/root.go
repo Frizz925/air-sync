@@ -38,11 +38,18 @@ var rootCmd = &cobra.Command{
 			log.Infof("Defaulting to port %s", port)
 		}
 
-		srv := &app.MonolithicService{
-			Addr:       ":" + port,
-			EnableCORS: enableCORS,
+		mongoUri := os.Getenv("MONGODB_URI")
+		if mongoUri == "" {
+			mongoUri = "mongodb://root:password@localhost:27017"
+			log.Infof("Defaulting to MongoDB URI %s", mongoUri)
 		}
-		if err := srv.Start(ctx); err != nil {
+
+		err := (&app.MonolithicApplication{
+			Addr:       ":" + port,
+			MongoUri:   mongoUri,
+			EnableCORS: enableCORS,
+		}).Start(ctx)
+		if err != nil {
 			log.Fatal(err)
 		}
 	},

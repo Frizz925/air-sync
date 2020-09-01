@@ -1,19 +1,19 @@
 package logging
 
 import (
-	"air-sync/repositories/entities"
+	"air-sync/models"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type SessionLogFormatter struct {
 	log.Formatter
-	session entities.Session
+	session models.Session
 }
 
 var _ log.Formatter = (*SessionLogFormatter)(nil)
 
-func NewSessionLogFormatter(fmt log.Formatter, session entities.Session) *SessionLogFormatter {
+func NewSessionLogFormatter(fmt log.Formatter, session models.Session) *SessionLogFormatter {
 	return &SessionLogFormatter{
 		Formatter: fmt,
 		session:   session,

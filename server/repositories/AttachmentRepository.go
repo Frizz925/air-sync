@@ -1,14 +1,14 @@
 package repositories
 
 import (
-	"air-sync/repositories/entities"
+	"air-sync/models"
 	"errors"
 )
 
 var ErrAttachmentNotFound = errors.New("Attachment not found")
 
 type AttachmentRepository interface {
-	Create(arg entities.CreateAttachment) (entities.Attachment, error)
-	Find(id string) (entities.Attachment, error)
+	Create(arg models.CreateAttachment) (models.Attachment, error)
+	Find(id string) (models.Attachment, error)
 	Delete(id string) error
 }
