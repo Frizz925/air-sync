@@ -8,14 +8,14 @@ import (
 )
 
 type Session struct {
-	ID        string    `bson:"_id"`
+	Id        string    `bson:"_id"`
 	Messages  []Message `bson:"messages"`
 	CreatedAt int64     `bson:"created_at"`
 }
 
 func NewSession() Session {
 	return Session{
-		ID:        uuid.NewV4().String(),
+		Id:        uuid.NewV4().String(),
 		Messages:  make([]Message, 0),
 		CreatedAt: time.Now().Unix(),
 	}
@@ -27,7 +27,7 @@ func ToSessionModel(session Session) models.Session {
 		messages[index] = ToMessageModel(message)
 	}
 	return models.Session{
-		ID:        session.ID,
+		Id:        session.Id,
 		Messages:  messages,
 		CreatedAt: session.CreatedAt,
 	}

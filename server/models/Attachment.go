@@ -8,7 +8,7 @@ type BaseAttachment struct {
 
 type Attachment struct {
 	BaseAttachment
-	ID        string `json:"id"`
+	Id        string `json:"id"`
 	CreatedAt int64  `gorm:"autoCreateTime"`
 }
 

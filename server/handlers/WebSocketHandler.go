@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"air-sync/models"
+	"air-sync/models/events"
 	"air-sync/models/formatters"
 	repos "air-sync/repositories"
-	"air-sync/subscribers/events"
 	"air-sync/util"
 	"air-sync/util/pubsub"
 	"context"
@@ -18,20 +18,20 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type WebSocketOptions struct {
+	Repository repos.SessionRepository
+	Publisher  *pubsub.Publisher
+	EnableCORS bool
+}
+
 type WebSocketHandler struct {
 	*SessionHandler
 	upgrader *websocket.Upgrader
 }
 
-type WebSocketHandlerOptions struct {
-	Repository repos.SessionRepository
-	Stream     *pubsub.Stream
-	EnableCORS bool
-}
-
 type WebSocketSession struct {
 	models.Session
-	*pubsub.Topic
+	*pubsub.Subscriber
 	conn    *websocket.Conn
 	request *http.Request
 	logger  *log.Logger
@@ -41,14 +41,13 @@ type OriginCheck func(req *http.Request) bool
 
 var _ RouteHandler = (*WebSocketHandler)(nil)
 
-func NewWebSocketHandler(opts WebSocketHandlerOptions) *WebSocketHandler {
+func NewWebSocketHandler(opts WebSocketOptions) *WebSocketHandler {
 	var checkOrigin OriginCheck = nil
 	if opts.EnableCORS {
 		checkOrigin = acceptAllOrigin
 	}
-
 	return &WebSocketHandler{
-		SessionHandler: NewSessionHandler(opts.Repository, opts.Stream),
+		SessionHandler: NewSessionHandler(opts.Repository, opts.Publisher),
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  2048,
 			WriteBufferSize: 2048,
@@ -69,6 +68,7 @@ func (h *WebSocketHandler) SetupWS(w http.ResponseWriter, req *http.Request) {
 		h.HandleSessionError(w, err)
 		return
 	}
+
 	logger := util.RequestLogger(req)
 	conn, err := h.upgrader.Upgrade(w, req, nil)
 	if err != nil {
@@ -76,14 +76,18 @@ func (h *WebSocketHandler) SetupWS(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer conn.Close()
-	name := events.SessionEventName(id)
+
+	sub := h.pub.Topic(events.EventSessionId(id)).Subscribe()
+	defer sub.Unsubscribe()
+
 	ws := &WebSocketSession{
-		Session: session,
-		Topic:   h.stream.Topic(name),
-		conn:    conn,
-		request: req,
-		logger:  logger,
+		Session:    session,
+		Subscriber: sub,
+		conn:       conn,
+		request:    req,
+		logger:     logger,
 	}
+
 	ws.Setup()
 	if err := ws.Start(); err != nil {
 		if err != io.EOF {
@@ -99,8 +103,8 @@ func (ws *WebSocketSession) Setup() {
 }
 
 func (ws *WebSocketSession) Start() error {
-	ws.logger.WithField("session_id", ws.ID).Info("New WebSocket client connected")
-	defer ws.logger.WithField("session_id", ws.ID).Info("WebSocket client disconnected")
+	ws.logger.WithField("session_id", ws.Id).Info("New WebSocket client connected")
+	defer ws.logger.WithField("session_id", ws.Id).Info("WebSocket client disconnected")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -112,26 +116,16 @@ func (ws *WebSocketSession) Start() error {
 		cancel()
 	}()
 
-	sub := ws.Subscribe()
-	defer sub.Unsubscribe()
-
-	ch := sub.Observe()
+	ch := ws.Channel()
 	for {
 		timeout := time.After(30 * time.Second)
 		select {
-		case item := <-ch:
-			if item.E != nil {
-				if item.E != pubsub.ErrStreamClosed {
-					return item.E
-				} else {
-					return nil
-				}
-			}
-			v, ok := item.V.(events.SessionEvent)
+		case v := <-ch:
+			event, ok := v.(events.SessionEvent)
 			if !ok {
 				continue
 			}
-			err := ws.conn.WriteJSON(formatters.FromSessionEvent(v))
+			err := ws.conn.WriteJSON(formatters.FromSessionEvent(event))
 			if err != nil {
 				return err
 			}

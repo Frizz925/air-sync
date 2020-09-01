@@ -8,7 +8,7 @@ import (
 )
 
 type Attachment struct {
-	ID        string `bson:"_id"`
+	Id        string `bson:"_id"`
 	Filename  string `bson:"filename"`
 	Type      string `bson:"type"`
 	Mime      string `bson:"mime"`
@@ -17,7 +17,7 @@ type Attachment struct {
 
 func NewAttachment() Attachment {
 	return Attachment{
-		ID:        uuid.NewV4().String(),
+		Id:        uuid.NewV4().String(),
 		CreatedAt: time.Now().Unix(),
 	}
 }
@@ -37,7 +37,7 @@ func ToAttachmentModel(attachment Attachment) models.Attachment {
 			Filename: attachment.Filename,
 			Mime:     attachment.Mime,
 		},
-		ID:        attachment.ID,
+		Id:        attachment.Id,
 		CreatedAt: attachment.CreatedAt,
 	}
 }

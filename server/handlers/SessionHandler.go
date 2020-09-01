@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"air-sync/models"
+	"air-sync/models/events"
 	repos "air-sync/repositories"
 	"air-sync/util"
 	"air-sync/util/logging"
@@ -27,16 +28,18 @@ var (
 )
 
 type SessionHandler struct {
-	repo   repos.SessionRepository
-	stream *pubsub.Stream
+	repo  repos.SessionRepository
+	pub   *pubsub.Publisher
+	topic *pubsub.Topic
 }
 
 type SessionHandlerFunc func(req *http.Request, session models.Session) (interface{}, error)
 
-func NewSessionHandler(repo repos.SessionRepository, stream *pubsub.Stream) *SessionHandler {
+func NewSessionHandler(repo repos.SessionRepository, pub *pubsub.Publisher) *SessionHandler {
 	return &SessionHandler{
-		repo:   repo,
-		stream: stream,
+		repo:  repo,
+		pub:   pub,
+		topic: pub.Topic(events.EventSession),
 	}
 }
 

@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"air-sync/models/events"
 	"air-sync/models/formatters"
 	repos "air-sync/repositories"
-	"air-sync/subscribers/events"
 	"air-sync/util"
 	"air-sync/util/pubsub"
 	"net/http"
@@ -18,9 +18,9 @@ type LongPollHandler struct {
 
 var _ RouteHandler = (*LongPollHandler)(nil)
 
-func NewLongPollHandler(repo repos.SessionRepository, stream *pubsub.Stream) *LongPollHandler {
+func NewLongPollHandler(repo repos.SessionRepository, pub *pubsub.Publisher) *LongPollHandler {
 	return &LongPollHandler{
-		SessionHandler: NewSessionHandler(repo, stream),
+		SessionHandler: NewSessionHandler(repo, pub),
 	}
 }
 
@@ -41,21 +41,17 @@ func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, er
 	defer logger.Info("Long-polling session ended")
 
 	ctx := req.Context()
-	sub := h.stream.Topic(events.SessionEventName(id)).Subscribe()
+	sub := h.pub.Topic(events.EventSessionId(id)).Subscribe()
 	defer sub.Unsubscribe()
+	ch := sub.Channel()
 
 	timeout := time.After(30 * time.Second) // Poll for 30 seconds
 	select {
-	case item := <-sub.Observe():
-		if err := item.E; err != nil {
-			if err != pubsub.ErrStreamClosed {
-				return nil, err
-			}
-		}
-		if v, ok := item.V.(events.SessionEvent); ok {
+	case v := <-ch:
+		if event, ok := v.(events.SessionEvent); ok {
 			return &util.RestResponse{
 				Message: "New session event",
-				Data:    formatters.FromSessionEvent(v),
+				Data:    formatters.FromSessionEvent(event),
 			}, nil
 		}
 	case <-timeout:

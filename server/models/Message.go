@@ -3,12 +3,12 @@ package models
 type BaseMessage struct {
 	Sensitive    bool   `json:"sensitive"`
 	Body         string `json:"body,omitempty"`
-	AttachmentID string `json:"attachment_id,omitempty"`
+	AttachmentId string `json:"attachment_id,omitempty"`
 }
 
 type Message struct {
 	BaseMessage
-	ID        string `json:"id"`
+	Id        string `json:"id"`
 	CreatedAt int64  `json:"created_at"`
 }
 

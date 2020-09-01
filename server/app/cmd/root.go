@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"air-sync/app"
+	"air-sync/util"
 	"context"
 	"os"
 	"os/signal"
@@ -19,7 +20,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "air-sync",
 	Short: "Air Sync is a small web application to quickly send messages over the internet",
-	Long: `Small and lightweight, Air Sync is aimed to send various messages 
+	Long: `Small and lightweight, Air Sync is aimed to send various messages
 		from one device to the other securely over the internet.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ch := make(chan os.Signal, 1)
@@ -38,16 +39,19 @@ var rootCmd = &cobra.Command{
 			log.Infof("Defaulting to port %s", port)
 		}
 
-		mongoUri := os.Getenv("MONGODB_URI")
-		if mongoUri == "" {
-			mongoUri = "mongodb://root:password@localhost:27017"
-			log.Infof("Defaulting to MongoDB URI %s", mongoUri)
+		mongoUrl, err := util.EnvMongoUrl()
+		if err != nil {
+			log.Fatal(err)
+			return
 		}
 
-		err := (&app.MonolithicApplication{
-			Addr:       ":" + port,
-			MongoUri:   mongoUri,
-			EnableCORS: enableCORS,
+		err = (&app.MonolithicApplication{
+			Addr:          ":" + port,
+			MongoUrl:      mongoUrl,
+			MongoDbName:   util.EnvMongoDbName(),
+			RedisAddr:     util.EnvRedisAddr(),
+			RedisPassword: util.EnvRedisPassword(),
+			EnableCORS:    enableCORS,
 		}).Start(ctx)
 		if err != nil {
 			log.Fatal(err)

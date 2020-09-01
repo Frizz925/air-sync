@@ -3,45 +3,68 @@ package app
 import (
 	"air-sync/handlers"
 	"air-sync/services"
-	"air-sync/subscribers"
-	"air-sync/util/pubsub"
 	"context"
+	"net/url"
 
 	"github.com/gorilla/mux"
 )
 
 type MonolithicApplication struct {
-	Addr       string
-	MongoUri   string
-	EnableCORS bool
+	Addr          string
+	MongoUrl      *url.URL
+	MongoDbName   string
+	RedisAddr     string
+	RedisPassword string
+	EnableCORS    bool
 }
 
 var _ Application = (*MonolithicApplication)(nil)
 
 func (s *MonolithicApplication) Start(ctx context.Context) error {
-	repoSrv := services.NewMongoRepositoryService(s.MongoUri, "airsync")
-	if err := repoSrv.Initialize(); err != nil {
+	repos := services.NewMongoRepositoryService(s.MongoUrl, s.MongoDbName)
+	if err := repos.Initialize(); err != nil {
 		return err
 	}
-	defer repoSrv.Deinitialize()
+	defer repos.Deinitialize()
 
-	stream := pubsub.NewStream()
-	defer stream.Shutdown()
-	subscribers.SubscribeSession(stream)
+	eventBroker := services.NewEventBrokerService()
+	eventBroker.Initialize()
+	defer eventBroker.Deinitialize()
+
+	/*
+		redisBroker := services.NewRedisBrokerService(services.RedisBrokerOptions{
+			Publisher: eventBroker.Publisher(),
+			Addr:      s.RedisAddr,
+			Password:  s.RedisPassword,
+		})
+		if err := redisBroker.Initialize(); err != nil {
+			return err
+		}
+		defer redisBroker.Deinitialize()
+	*/
 
 	router := mux.NewRouter()
 	handlers.NewApiHandler(
-		handlers.NewSessionRestHandler(repoSrv.SessionRepository(), stream),
+		handlers.NewSessionRestHandler(
+			repos.SessionRepository(),
+			eventBroker.Publisher(),
+		),
 		handlers.QrRestHandler(0),
 	).RegisterRoutes(router)
-	handlers.NewWebSocketHandler(handlers.WebSocketHandlerOptions{
-		Repository: repoSrv.SessionRepository(),
-		Stream:     stream,
+	handlers.NewWebSocketHandler(handlers.WebSocketOptions{
+		Repository: repos.SessionRepository(),
+		Publisher:  eventBroker.Publisher(),
 		EnableCORS: s.EnableCORS,
 	}).RegisterRoutes(router)
-	handlers.NewStreamingHandler(repoSrv.SessionRepository(), stream).RegisterRoutes(router)
-	handlers.NewLongPollHandler(repoSrv.SessionRepository(), stream).RegisterRoutes(router)
-	handlers.NewWebHandler(handlers.WebHandlerOptions{
+	handlers.NewStreamingHandler(
+		repos.SessionRepository(),
+		eventBroker.Publisher(),
+	).RegisterRoutes(router)
+	handlers.NewLongPollHandler(
+		repos.SessionRepository(),
+		eventBroker.Publisher(),
+	).RegisterRoutes(router)
+	handlers.NewWebHandler(handlers.WebOptions{
 		PublicPath:   "public",
 		IndexFile:    "index.html",
 		NotFoundFile: "404.html",

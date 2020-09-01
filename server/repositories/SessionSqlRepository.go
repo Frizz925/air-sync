@@ -49,8 +49,8 @@ func (r *SessionSqlRepository) InsertMessage(id string, arg models.InsertMessage
 
 func (r *SessionSqlRepository) DeleteMessage(id string, messageId string) error {
 	err := r.db.Delete(orm.Message{
-		ID:        messageId,
-		SessionID: id,
+		Id:        messageId,
+		SessionId: id,
 	}).Error
 	return r.messageCrudError(err)
 }

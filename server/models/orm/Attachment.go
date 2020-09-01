@@ -8,7 +8,7 @@ import (
 )
 
 type Attachment struct {
-	ID        string `gorm:"primaryKey"`
+	Id        string `gorm:"primaryKey"`
 	Filename  string `gorm:"not null"`
 	Type      string `gorm:"not null"`
 	Mime      string `gorm:"not null"`
@@ -17,7 +17,7 @@ type Attachment struct {
 
 func NewAttachment() Attachment {
 	return Attachment{
-		ID:        uuid.NewV4().String(),
+		Id:        uuid.NewV4().String(),
 		CreatedAt: time.Now().Unix(),
 	}
 }
@@ -37,7 +37,7 @@ func ToAttachmentModel(attachment Attachment) models.Attachment {
 			Filename: attachment.Filename,
 			Mime:     attachment.Mime,
 		},
-		ID:        attachment.ID,
+		Id:        attachment.Id,
 		CreatedAt: attachment.CreatedAt,
 	}
 }

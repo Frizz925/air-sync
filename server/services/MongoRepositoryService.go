@@ -3,6 +3,7 @@ package services
 import (
 	repos "air-sync/repositories"
 	"context"
+	"net/url"
 
 	log "github.com/sirupsen/logrus"
 
@@ -11,45 +12,59 @@ import (
 )
 
 type MongoRepositoryService struct {
+	context              context.Context
 	client               *mongo.Client
-	mongoUri             string
+	url                  *url.URL
 	dbName               string
 	sessionRepository    *repos.SessionMongoRepository
 	attachmentRepository *repos.AttachmentMongoRepository
+	initialized          bool
 }
 
 var _ RepositoryService = (*MongoRepositoryService)(nil)
 
-func NewMongoRepositoryService(mongoUri string, dbName string) *MongoRepositoryService {
+func NewMongoRepositoryService(url *url.URL, dbName string) *MongoRepositoryService {
 	return &MongoRepositoryService{
-		mongoUri: mongoUri,
-		dbName:   dbName,
+		context:     context.Background(),
+		url:         url,
+		dbName:      dbName,
+		initialized: false,
 	}
 }
 
 func (s *MongoRepositoryService) Initialize() error {
-	log.Infof("Connecting to MongoDB: %s", s.mongoUri)
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(s.mongoUri))
+	if s.initialized {
+		return ErrAlreadyInitialized
+	}
+
+	log.Infof("Connecting to MongoDB: %s", s.url.Host)
+	client, err := mongo.Connect(s.context, options.Client().ApplyURI(s.url.String()))
 	if err != nil {
 		return err
 	}
-	if err := client.Ping(context.Background(), nil); err != nil {
+	s.client = client
+	if err := client.Ping(s.context, nil); err != nil {
+		defer s.disconnect()
 		return err
 	}
 	log.Infof("Connected to MongoDB")
-	s.client = client
 
 	log.Infof("Using MongoDB database: %s", s.dbName)
 	db := client.Database(s.dbName)
-	s.sessionRepository = repos.NewSessionMongoRepository(db)
-	s.attachmentRepository = repos.NewAttachmentMongoRepository(db)
+	s.sessionRepository = repos.NewSessionMongoRepository(s.context, db)
+	s.attachmentRepository = repos.NewAttachmentMongoRepository(s.context, db)
 
+	s.initialized = true
 	return nil
 }
 
 func (s *MongoRepositoryService) Deinitialize() {
-	if err := s.client.Disconnect(context.Background()); err != nil {
-		log.Fatal(err)
+	if !s.initialized {
+		log.Error(ErrNotInitialized)
+		return
+	}
+	if err := s.client.Disconnect(s.context); err != nil {
+		log.Error(err)
 	}
 }
 
@@ -59,4 +74,13 @@ func (s *MongoRepositoryService) SessionRepository() repos.SessionRepository {
 
 func (s *MongoRepositoryService) AttachmentRepository() repos.AttachmentRepository {
 	return s.attachmentRepository
+}
+
+func (s *MongoRepositoryService) disconnect() {
+	if s.client != nil {
+		err := s.client.Disconnect(s.context)
+		if err != nil {
+			log.Error(err)
+		}
+	}
 }

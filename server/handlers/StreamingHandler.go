@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"air-sync/models/events"
 	"air-sync/models/formatters"
 	repos "air-sync/repositories"
-	"air-sync/subscribers/events"
 	"air-sync/util/pubsub"
 	"encoding/json"
 	"io"
@@ -26,9 +26,9 @@ type StreamingHandler struct {
 
 var _ RouteHandler = (*StreamingHandler)(nil)
 
-func NewStreamingHandler(repo repos.SessionRepository, stream *pubsub.Stream) *StreamingHandler {
+func NewStreamingHandler(repo repos.SessionRepository, pub *pubsub.Publisher) *StreamingHandler {
 	return &StreamingHandler{
-		SessionHandler: NewSessionHandler(repo, stream),
+		SessionHandler: NewSessionHandler(repo, pub),
 	}
 }
 
@@ -64,8 +64,10 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	topic := h.stream.Topic(events.SessionEventName(id))
-	if err := h.HandleStream(rwf, req, topic); err != nil {
+	sub := h.pub.Topic(events.EventSessionId(id)).Subscribe()
+	defer sub.Unsubscribe()
+
+	if err := h.HandleStream(rwf, req, sub); err != nil {
 		if err != io.EOF {
 			logger.Error(err)
 		}
@@ -76,28 +78,18 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 	}
 }
 
-func (h *StreamingHandler) HandleStream(rwf ResponseWriteFlusher, req *http.Request, topic *pubsub.Topic) error {
-	sub := topic.Subscribe()
-	defer sub.Unsubscribe()
-
+func (h *StreamingHandler) HandleStream(rwf ResponseWriteFlusher, req *http.Request, sub *pubsub.Subscriber) error {
 	ctx := req.Context()
-	ch := sub.Observe()
+	ch := sub.Channel()
 	for {
 		timeout := time.After(30 * time.Second)
 		select {
-		case item := <-ch:
-			if item.E != nil {
-				if item.E != pubsub.ErrStreamClosed {
-					return item.E
-				} else {
-					return nil
-				}
-			}
-			v, ok := item.V.(events.SessionEvent)
+		case v := <-ch:
+			event, ok := v.(events.SessionEvent)
 			if !ok {
 				continue
 			}
-			b, err := json.Marshal(formatters.FromSessionEvent(v))
+			b, err := json.Marshal(formatters.FromSessionEvent(event))
 			if err != nil {
 				return err
 			}

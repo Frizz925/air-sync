@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"air-sync/models"
+	"air-sync/models/events"
 	repos "air-sync/repositories"
-	"air-sync/subscribers/events"
 	"air-sync/util"
 	"air-sync/util/pubsub"
 	"encoding/json"
@@ -19,9 +19,9 @@ type SessionRestHandler struct {
 
 var _ RouteHandler = (*SessionRestHandler)(nil)
 
-func NewSessionRestHandler(repo repos.SessionRepository, stream *pubsub.Stream) *SessionRestHandler {
+func NewSessionRestHandler(repo repos.SessionRepository, pub *pubsub.Publisher) *SessionRestHandler {
 	return &SessionRestHandler{
-		SessionHandler: NewSessionHandler(repo, stream),
+		SessionHandler: NewSessionHandler(repo, pub),
 	}
 }
 
@@ -39,10 +39,15 @@ func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestRespons
 	if err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	util.RequestLogger(req).WithField("session_id", session.ID).Info("Created new session")
+	h.topic.Publish(events.SessionEvent{
+		Event:     events.EventSessionCreated,
+		SessionId: session.Id,
+		Value:     events.SessionCreate(session),
+	})
+	util.RequestLogger(req).WithField("session_id", session.Id).Info("Created new session")
 	return &util.RestResponse{
 		Message: "Session created",
-		Data:    session.ID,
+		Data:    session.Id,
 	}, nil
 }
 
@@ -55,7 +60,11 @@ func (h *SessionRestHandler) DeleteSession(req *http.Request) (*util.RestRespons
 	if err := h.repo.Delete(id); err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	h.stream.Topic(events.SessionDeleted).Fire(events.SessionDelete(id))
+	h.topic.Publish(events.SessionEvent{
+		Event:     events.EventSessionDeleted,
+		SessionId: id,
+		Value:     events.SessionDelete(id),
+	})
 	util.RequestLogger(req).WithField("session_id", id).Info("Deleted session")
 	return &util.RestResponse{
 		Message: "Session deleted",
@@ -69,7 +78,7 @@ func (h *SessionRestHandler) InsertMessage(req *http.Request) (*util.RestRespons
 	if err := dec.Decode(&insert); err != nil {
 		return nil, err
 	}
-	if insert.Body == "" && insert.AttachmentID == "" {
+	if insert.Body == "" && insert.AttachmentId == "" {
 		return &util.RestResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    "Malformed request",
@@ -80,17 +89,21 @@ func (h *SessionRestHandler) InsertMessage(req *http.Request) (*util.RestRespons
 	if err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	h.stream.Topic(events.MessageInserted).Fire(events.MessageInsert{
+	h.topic.Publish(events.SessionEvent{
+		Event:     events.EventMessageInserted,
 		SessionId: id,
-		Message:   message,
+		Value: events.MessageInsert{
+			SessionId: id,
+			Message:   message,
+		},
 	})
 	util.RequestLogger(req).WithFields(log.Fields{
 		"session_id": id,
-		"message_id": message.ID,
+		"message_id": message.Id,
 	}).Info("Inserted message")
 	return &util.RestResponse{
 		Message: "Message inserted",
-		Data:    message.ID,
+		Data:    message.Id,
 	}, nil
 }
 
@@ -101,9 +114,13 @@ func (h *SessionRestHandler) DeleteMessage(req *http.Request) (*util.RestRespons
 	if err := h.repo.DeleteMessage(sessionId, messageId); err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	h.stream.Topic(events.MessageDeleted).Fire(events.MessageDelete{
+	h.pub.Topic(events.EventSession).Publish(events.SessionEvent{
+		Event:     events.EventMessageDeleted,
 		SessionId: sessionId,
-		MessageId: messageId,
+		Value: events.MessageDelete{
+			SessionId: sessionId,
+			MessageId: messageId,
+		},
 	})
 	util.RequestLogger(req).WithFields(log.Fields{
 		"session_id": sessionId,

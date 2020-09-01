@@ -11,31 +11,33 @@ import (
 
 type SessionMongoRepository struct {
 	*MongoRepository
+	context  context.Context
 	sessions *mongo.Collection
 }
 
 var _ SessionRepository = (*SessionMongoRepository)(nil)
 
-func NewSessionMongoRepository(db *mongo.Database) *SessionMongoRepository {
+func NewSessionMongoRepository(ctx context.Context, db *mongo.Database) *SessionMongoRepository {
 	return &SessionMongoRepository{
 		MongoRepository: NewMongoRepository(db),
+		context:         ctx,
 		sessions:        db.Collection("sessions"),
 	}
 }
 
 func (r *SessionMongoRepository) Create() (models.Session, error) {
 	session := mongoModels.NewSession()
-	_, err := r.sessions.InsertOne(context.Background(), session)
+	_, err := r.sessions.InsertOne(r.context, session)
 	return mongoModels.ToSessionModel(session), err
 }
 
 func (r *SessionMongoRepository) Find(id string) (models.Session, error) {
-	cur, err := r.sessions.Find(context.Background(), bson.M{"_id": id})
+	cur, err := r.sessions.Find(r.context, bson.M{"_id": id})
 	if err != nil {
 		return models.EmptySession, err
 	}
-	defer cur.Close(context.Background())
-	if !cur.Next(context.Background()) {
+	defer cur.Close(r.context)
+	if !cur.Next(r.context) {
 		return models.EmptySession, ErrSessionNotFound
 	}
 	session := mongoModels.Session{}
@@ -46,7 +48,7 @@ func (r *SessionMongoRepository) Find(id string) (models.Session, error) {
 func (r *SessionMongoRepository) InsertMessage(id string, arg models.InsertMessage) (models.Message, error) {
 	message := mongoModels.FromInsertMessageModel(arg)
 	res, err := r.sessions.UpdateOne(
-		context.Background(),
+		r.context,
 		bson.M{"_id": id},
 		bson.M{"$push": bson.M{"messages": bson.M{
 			"$each":     bson.A{message},
@@ -63,18 +65,18 @@ func (r *SessionMongoRepository) InsertMessage(id string, arg models.InsertMessa
 
 func (r *SessionMongoRepository) DeleteMessage(id string, messageId string) error {
 	cur, err := r.sessions.Find(
-		context.Background(),
+		r.context,
 		bson.M{"_id": id, "messages._id": messageId},
 	)
 	if err != nil {
 		return err
 	}
-	defer cur.Close(context.Background())
-	if !cur.Next(context.Background()) {
+	defer cur.Close(r.context)
+	if !cur.Next(r.context) {
 		return ErrMessageNotFound
 	}
 	_, err = r.sessions.UpdateOne(
-		context.Background(),
+		r.context,
 		bson.M{"_id": id},
 		bson.M{"$pull": bson.M{"messages": bson.M{"_id": messageId}}},
 	)
@@ -82,7 +84,7 @@ func (r *SessionMongoRepository) DeleteMessage(id string, messageId string) erro
 }
 
 func (r *SessionMongoRepository) Delete(id string) error {
-	res, err := r.sessions.DeleteOne(context.Background(), bson.M{"_id": id})
+	res, err := r.sessions.DeleteOne(r.context, bson.M{"_id": id})
 	if err != nil {
 		return err
 	} else if res.DeletedCount <= 0 {

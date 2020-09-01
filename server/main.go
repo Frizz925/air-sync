@@ -13,6 +13,9 @@ func init() {
 }
 
 func main() {
+	if err := util.LoadDotEnv(); err != nil {
+		log.Fatal(err)
+	}
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err)
 	}

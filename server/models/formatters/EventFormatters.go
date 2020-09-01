@@ -2,7 +2,7 @@ package formatters
 
 import (
 	"air-sync/models"
-	"air-sync/subscribers/events"
+	"air-sync/models/events"
 	"time"
 )
 

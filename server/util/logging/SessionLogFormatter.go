@@ -21,6 +21,6 @@ func NewSessionLogFormatter(fmt log.Formatter, session models.Session) *SessionL
 }
 
 func (f *SessionLogFormatter) Format(e *log.Entry) ([]byte, error) {
-	e.Data["session_id"] = f.session.ID
+	e.Data["session_id"] = f.session.Id
 	return f.Formatter.Format(e)
 }
