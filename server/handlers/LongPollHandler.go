@@ -30,7 +30,7 @@ func (h *LongPollHandler) RegisterRoutes(r *mux.Router) {
 
 func (h *LongPollHandler) PollSession(req *http.Request) (*util.JsonResponse, error) {
 	id := mux.Vars(req)["id"]
-	session, err := h.repo.Get(id)
+	session, err := h.repo.Find(id)
 	if err != nil {
 		return nil, err
 	}

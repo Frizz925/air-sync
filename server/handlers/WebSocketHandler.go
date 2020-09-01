@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"air-sync/models"
 	"air-sync/models/formatters"
 	repos "air-sync/repositories"
+	"air-sync/repositories/entities"
 	"air-sync/subscribers/events"
 	"air-sync/util"
 	"air-sync/util/pubsub"
@@ -30,7 +30,7 @@ type WebSocketHandlerOptions struct {
 }
 
 type WebSocketSession struct {
-	*models.Session
+	entities.Session
 	*pubsub.Topic
 	conn    *websocket.Conn
 	request *http.Request
@@ -64,7 +64,7 @@ func (h *WebSocketHandler) RegisterRoutes(r *mux.Router) {
 func (h *WebSocketHandler) SetupWS(w http.ResponseWriter, req *http.Request) {
 	req = util.DecorateRequest(req)
 	id := mux.Vars(req)["id"]
-	session, err := h.repo.Get(id)
+	session, err := h.repo.Find(id)
 	if err != nil {
 		h.HandleSessionError(w, err)
 		return
@@ -99,8 +99,8 @@ func (ws *WebSocketSession) Setup() {
 }
 
 func (ws *WebSocketSession) Start() error {
-	ws.logger.WithField("session_id", ws.Id).Info("New WebSocket client connected")
-	defer ws.logger.WithField("session_id", ws.Id).Info("WebSocket client disconnected")
+	ws.logger.WithField("session_id", ws.ID).Info("New WebSocket client connected")
+	defer ws.logger.WithField("session_id", ws.ID).Info("WebSocket client disconnected")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {

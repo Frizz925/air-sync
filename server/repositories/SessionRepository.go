@@ -1,7 +1,8 @@
-package stores
+package repositories
 
 import (
 	"air-sync/models"
+	"air-sync/repositories/entities"
 	"errors"
 )
 
@@ -11,9 +12,9 @@ var (
 )
 
 type SessionRepository interface {
-	Create() (*models.Session, error)
-	Get(id string) (*models.Session, error)
-	InsertMessage(id string, message models.Message) error
+	Create() (entities.Session, error)
+	Find(id string) (entities.Session, error)
+	InsertMessage(id string, model models.Message) (entities.Message, error)
 	DeleteMessage(id string, messageId string) error
 	Delete(id string) error
 }
