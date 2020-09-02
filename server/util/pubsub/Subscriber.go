@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
@@ -12,32 +13,44 @@ type SubscriberFunc func(item interface{}) error
 type ErrorHandlerFunc func(err error)
 
 type Subscriber struct {
-	topic    *Topic
-	id       int
-	channels []chan interface{}
-	mu       sync.Mutex
+	context   context.Context
+	topic     *Topic
+	id        int
+	sender    chan interface{}
+	receivers []chan interface{}
+	cancel    context.CancelFunc
+	mu        sync.Mutex
 }
 
 func NewSubscriber(t *Topic, id int) *Subscriber {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Subscriber{
-		id:       id,
-		topic:    t,
-		channels: make([]chan interface{}, 0),
+		context:   ctx,
+		topic:     t,
+		id:        id,
+		sender:    make(chan interface{}, 1),
+		receivers: make([]chan interface{}, 0),
+		cancel:    cancel,
 	}
 }
 
-func (s *Subscriber) ForEach(handler SubscriberFunc) error {
-	for v := range s.Channel() {
-		if err := handler(v); err != nil {
-			return err
+func (s *Subscriber) ForEach(ctx context.Context, handler SubscriberFunc) error {
+	ch := s.Channel()
+	for {
+		select {
+		case v := <-ch:
+			if err := handler(v); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
 		}
 	}
-	return nil
 }
 
-func (s *Subscriber) ForEachAsync(handler SubscriberFunc, errorHandler ErrorHandlerFunc) {
+func (s *Subscriber) ForEachAsync(ctx context.Context, handler SubscriberFunc, errorHandler ErrorHandlerFunc) {
 	go func() {
-		if err := s.ForEach(handler); err != nil {
+		if err := s.ForEach(ctx, handler); err != nil {
 			errorHandler(err)
 		}
 	}()
@@ -47,7 +60,7 @@ func (s *Subscriber) Channel() <-chan interface{} {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ch := make(chan interface{}, 1)
-	s.channels = append(s.channels, ch)
+	s.receivers = append(s.receivers, ch)
 	return ch
 }
 
@@ -56,19 +69,31 @@ func (s *Subscriber) Unsubscribe() {
 	s.cleanup()
 }
 
-func (s *Subscriber) fire(v interface{}) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, ch := range s.channels {
-		ch <- v
+func (s *Subscriber) start() {
+	for {
+		select {
+		case v := <-s.sender:
+			s.mu.Lock()
+			for _, ch := range s.receivers {
+				ch <- v
+			}
+			s.mu.Unlock()
+		case <-s.context.Done():
+			return
+		}
 	}
 }
 
+func (s *Subscriber) fire(v interface{}) {
+	s.sender <- v
+}
+
 func (s *Subscriber) cleanup() {
+	s.cancel()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, ch := range s.channels {
+	for _, ch := range s.receivers {
 		close(ch)
 	}
-	s.channels = make([]chan interface{}, 0)
+	s.receivers = make([]chan interface{}, 0)
 }

@@ -39,11 +39,9 @@ func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestRespons
 	if err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	h.topic.Publish(events.SessionEvent{
-		Event:     events.EventSessionCreated,
-		SessionId: session.Id,
-		Value:     events.SessionCreate(session),
-	})
+	h.topic.Publish(events.CreateSessionEvent(
+		session.Id, events.EventSessionCreated, events.SessionCreate(session), nil,
+	))
 	util.RequestLogger(req).WithField("session_id", session.Id).Info("Created new session")
 	return &util.RestResponse{
 		Message: "Session created",
@@ -60,11 +58,9 @@ func (h *SessionRestHandler) DeleteSession(req *http.Request) (*util.RestRespons
 	if err := h.repo.Delete(id); err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	h.topic.Publish(events.SessionEvent{
-		Event:     events.EventSessionDeleted,
-		SessionId: id,
-		Value:     events.SessionDelete(id),
-	})
+	h.topic.Publish(events.CreateSessionEvent(
+		id, events.EventSessionDeleted, events.SessionDelete(id), nil,
+	))
 	util.RequestLogger(req).WithField("session_id", id).Info("Deleted session")
 	return &util.RestResponse{
 		Message: "Session deleted",
@@ -89,14 +85,12 @@ func (h *SessionRestHandler) InsertMessage(req *http.Request) (*util.RestRespons
 	if err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	h.topic.Publish(events.SessionEvent{
-		Event:     events.EventMessageInserted,
-		SessionId: id,
-		Value: events.MessageInsert{
+	h.topic.Publish(events.CreateSessionEvent(
+		id, events.EventMessageInserted, events.MessageInsert{
 			SessionId: id,
 			Message:   message,
-		},
-	})
+		}, nil,
+	))
 	util.RequestLogger(req).WithFields(log.Fields{
 		"session_id": id,
 		"message_id": message.Id,
@@ -114,14 +108,12 @@ func (h *SessionRestHandler) DeleteMessage(req *http.Request) (*util.RestRespons
 	if err := h.repo.DeleteMessage(sessionId, messageId); err != nil {
 		return h.HandleSessionRestError(err)
 	}
-	h.pub.Topic(events.EventSession).Publish(events.SessionEvent{
-		Event:     events.EventMessageDeleted,
-		SessionId: sessionId,
-		Value: events.MessageDelete{
+	h.pub.Topic(events.EventSession).Publish(events.CreateSessionEvent(
+		sessionId, events.EventMessageDeleted, events.MessageDelete{
 			SessionId: sessionId,
 			MessageId: messageId,
-		},
-	})
+		}, nil,
+	))
 	util.RequestLogger(req).WithFields(log.Fields{
 		"session_id": sessionId,
 		"message_id": messageId,

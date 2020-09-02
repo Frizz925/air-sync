@@ -5,7 +5,9 @@ import (
 	"air-sync/util/pubsub"
 	"context"
 	"encoding/json"
+	"sync"
 
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/go-redis/redis/v8"
@@ -21,15 +23,19 @@ type RedisBrokerService struct {
 	context     context.Context
 	pub         *pubsub.Publisher
 	client      *redis.Client
+	clientId    string
 	addr        string
 	password    string
 	initialized bool
+	lastEventId string
+	mu          sync.Mutex
 }
 
-func NewRedisBrokerService(opts RedisBrokerOptions) *RedisBrokerService {
+func NewRedisBrokerService(ctx context.Context, opts RedisBrokerOptions) *RedisBrokerService {
 	return &RedisBrokerService{
-		context:     context.Background(),
+		context:     ctx,
 		pub:         opts.Publisher,
+		clientId:    uuid.NewV4().String(),
 		addr:        opts.Addr,
 		password:    opts.Password,
 		initialized: false,
@@ -77,7 +83,7 @@ func (s *RedisBrokerService) Deinitialize() {
 
 func (s *RedisBrokerService) handlePublishingAsync() {
 	s.pub.Topic(events.EventSession).Subscribe().
-		ForEachAsync(s.handlePublishing, s.handleError)
+		ForEachAsync(s.context, s.handlePublishing, s.handleError)
 }
 
 func (s *RedisBrokerService) handlePublishing(v interface{}) error {
@@ -85,10 +91,24 @@ func (s *RedisBrokerService) handlePublishing(v interface{}) error {
 	if !ok {
 		return nil
 	}
-	b, err := json.Marshal(event)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if event.Id == s.lastEventId {
+		return nil
+	}
+	s.lastEventId = event.Id
+	b, err := json.Marshal(events.RedisSessionEvent{
+		SessionEvent: event,
+		ClientId:     s.clientId,
+	})
 	if err != nil {
 		return err
 	}
+	log.WithFields(log.Fields{
+		"id":        event.Id,
+		"event":     event.Event,
+		"timestamp": event.Timestamp,
+	}).Infof("Redis published event")
 	return s.client.Publish(s.context, events.EventSession, string(b)).Err()
 }
 
@@ -102,21 +122,46 @@ func (s *RedisBrokerService) handleSubscriptionAsync(ps *redis.PubSub) {
 }
 
 func (s *RedisBrokerService) handleSubscription(ps *redis.PubSub) error {
+	ch := ps.Channel()
 	for {
-		msg, err := ps.ReceiveMessage(s.context)
-		if err != nil {
-			return err
+		select {
+		case msg := <-ch:
+			err := s.handleSubscriptionMessage(msg)
+			if err != nil {
+				return err
+			}
+		case <-s.context.Done():
+			return nil
 		}
-		if msg.Channel != events.EventSession {
-			continue
-		}
-		payload := []byte(msg.Payload)
-		event := events.SessionEvent{}
-		if err := json.Unmarshal(payload, &event); err != nil {
-			return err
-		}
-		s.pub.Topic(events.EventSession).Publish(event)
 	}
+}
+
+func (s *RedisBrokerService) handleSubscriptionMessage(msg *redis.Message) error {
+	if msg.Channel != events.EventSession {
+		return nil
+	}
+	payload := []byte(msg.Payload)
+	event := events.RedisSessionEvent{}
+	if err := json.Unmarshal(payload, &event); err != nil {
+		return err
+	}
+	// Prevent pubsub self-loop
+	if event.ClientId == s.clientId {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if event.Id == s.lastEventId {
+		return nil
+	}
+	s.lastEventId = event.Id
+	log.WithFields(log.Fields{
+		"id":        event.Id,
+		"event":     event.Event,
+		"timestamp": event.Timestamp,
+	}).Infof("Redis received event")
+	s.pub.Topic(events.EventSession).Publish(event.SessionEvent)
+	return nil
 }
 
 func (s *RedisBrokerService) handleError(err error) {

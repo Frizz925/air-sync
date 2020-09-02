@@ -28,7 +28,7 @@ func EnvMongoUrl() (*url.URL, error) {
 	return url.Parse(EnvMongoUri())
 }
 
-func EnvMongoDbName() string {
+func EnvMongoDatabase() string {
 	return GetEnvDefault("MONGODB_DATABASE", "airsync")
 }
 

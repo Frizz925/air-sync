@@ -22,6 +22,7 @@ func (t *Topic) Subscribe() *Subscriber {
 	defer t.mu.Unlock()
 	sub := NewSubscriber(t, t.publisher.nextId())
 	t.subscribers[sub.id] = sub
+	go sub.start()
 	return sub
 }
 

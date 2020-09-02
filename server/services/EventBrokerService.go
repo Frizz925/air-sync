@@ -3,21 +3,26 @@ package services
 import (
 	"air-sync/models/events"
 	"air-sync/util/pubsub"
+	"context"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type EventBrokerService struct {
-	pub *pubsub.Publisher
+	context context.Context
+	pub     *pubsub.Publisher
 }
 
-func NewEventBrokerService() *EventBrokerService {
-	return &EventBrokerService{pubsub.NewPublisher()}
+func NewEventBrokerService(ctx context.Context) *EventBrokerService {
+	return &EventBrokerService{
+		context: ctx,
+		pub:     pubsub.NewPublisher(),
+	}
 }
 
 func (s *EventBrokerService) Initialize() {
 	s.pub.Topic(events.EventSession).Subscribe().
-		ForEachAsync(s.handleSessionEvent, s.handleError)
+		ForEachAsync(s.context, s.handleSessionEvent, s.handleError)
 }
 
 func (s *EventBrokerService) Deinitialize() {

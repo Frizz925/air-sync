@@ -48,7 +48,7 @@ var rootCmd = &cobra.Command{
 		err = (&app.MonolithicApplication{
 			Addr:          ":" + port,
 			MongoUrl:      mongoUrl,
-			MongoDbName:   util.EnvMongoDbName(),
+			MongoDatabase: util.EnvMongoDatabase(),
 			RedisAddr:     util.EnvRedisAddr(),
 			RedisPassword: util.EnvRedisPassword(),
 			EnableCORS:    enableCORS,

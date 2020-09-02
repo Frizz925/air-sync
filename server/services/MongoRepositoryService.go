@@ -11,11 +11,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type MongoRepositoryOptions struct {
+	URL      *url.URL
+	Database string
+}
+
 type MongoRepositoryService struct {
 	context              context.Context
 	client               *mongo.Client
 	url                  *url.URL
-	dbName               string
+	database             string
 	sessionRepository    *repos.SessionMongoRepository
 	attachmentRepository *repos.AttachmentMongoRepository
 	initialized          bool
@@ -23,11 +28,11 @@ type MongoRepositoryService struct {
 
 var _ RepositoryService = (*MongoRepositoryService)(nil)
 
-func NewMongoRepositoryService(url *url.URL, dbName string) *MongoRepositoryService {
+func NewMongoRepositoryService(ctx context.Context, opts MongoRepositoryOptions) *MongoRepositoryService {
 	return &MongoRepositoryService{
 		context:     context.Background(),
-		url:         url,
-		dbName:      dbName,
+		url:         opts.URL,
+		database:    opts.Database,
 		initialized: false,
 	}
 }
@@ -49,8 +54,8 @@ func (s *MongoRepositoryService) Initialize() error {
 	}
 	log.Infof("Connected to MongoDB")
 
-	log.Infof("Using MongoDB database: %s", s.dbName)
-	db := client.Database(s.dbName)
+	log.Infof("Using MongoDB database: %s", s.database)
+	db := client.Database(s.database)
 	s.sessionRepository = repos.NewSessionMongoRepository(s.context, db)
 	s.attachmentRepository = repos.NewAttachmentMongoRepository(s.context, db)
 

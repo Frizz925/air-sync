@@ -12,7 +12,7 @@ import (
 type MonolithicApplication struct {
 	Addr          string
 	MongoUrl      *url.URL
-	MongoDbName   string
+	MongoDatabase string
 	RedisAddr     string
 	RedisPassword string
 	EnableCORS    bool
@@ -21,27 +21,28 @@ type MonolithicApplication struct {
 var _ Application = (*MonolithicApplication)(nil)
 
 func (s *MonolithicApplication) Start(ctx context.Context) error {
-	repos := services.NewMongoRepositoryService(s.MongoUrl, s.MongoDbName)
+	repos := services.NewMongoRepositoryService(ctx, services.MongoRepositoryOptions{
+		URL:      s.MongoUrl,
+		Database: s.MongoDatabase,
+	})
 	if err := repos.Initialize(); err != nil {
 		return err
 	}
 	defer repos.Deinitialize()
 
-	eventBroker := services.NewEventBrokerService()
+	eventBroker := services.NewEventBrokerService(ctx)
 	eventBroker.Initialize()
 	defer eventBroker.Deinitialize()
 
-	/*
-		redisBroker := services.NewRedisBrokerService(services.RedisBrokerOptions{
-			Publisher: eventBroker.Publisher(),
-			Addr:      s.RedisAddr,
-			Password:  s.RedisPassword,
-		})
-		if err := redisBroker.Initialize(); err != nil {
-			return err
-		}
-		defer redisBroker.Deinitialize()
-	*/
+	redisBroker := services.NewRedisBrokerService(ctx, services.RedisBrokerOptions{
+		Publisher: eventBroker.Publisher(),
+		Addr:      s.RedisAddr,
+		Password:  s.RedisPassword,
+	})
+	if err := redisBroker.Initialize(); err != nil {
+		return err
+	}
+	defer redisBroker.Deinitialize()
 
 	router := mux.NewRouter()
 	handlers.NewApiHandler(
