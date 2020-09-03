@@ -1,20 +1,20 @@
-.textContainer {
+.container {
   @apply relative w-full overflow-hidden;
   @apply text-sm w-full;
 }
 
-.textEditor {
+.editor {
   @apply overflow-hidden box-border outline-none;
 
   line-height: theme('height.6');
   min-height: theme('height.6');
 }
 
-.textPlaceholder {
+.placeholder {
   @apply absolute top-0 left-0;
   @apply text-gray-600 font-semibold pointer-events-none;
 }
 
-.textPlaceholder.hidden {
+.placeholder.hidden {
   @apply hidden;
 }

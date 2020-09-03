@@ -1,4 +1,4 @@
-import classNames from 'classnames';
+import clsx from 'clsx';
 import React, {
   useCallback,
   useEffect,
@@ -9,6 +9,7 @@ import React, {
 import styles from './styles.module.css';
 
 export interface TextBoxProps {
+  className?: string;
   value: string;
   placeholder?: string;
   onChange?: (value: string) => void;
@@ -16,6 +17,7 @@ export interface TextBoxProps {
 }
 
 const TextBox: React.FC<TextBoxProps> = ({
+  className,
   value,
   placeholder,
   onChange,
@@ -48,16 +50,13 @@ const TextBox: React.FC<TextBoxProps> = ({
       e.preventDefault();
       e.stopPropagation();
       const value = e.clipboardData.getData('text/plain');
-      document.execCommand('inserttext', false, value);
-      handleValue(value);
+      if (value) {
+        document.execCommand('inserttext', false, value);
+        handleValue(value);
+      }
       if (onPaste) onPaste(e);
     },
-    [handleChange]
-  );
-
-  const textPlaceholderClasses = useMemo(
-    () => classNames(styles.textPlaceholder, { [styles.hidden]: filled }),
-    [filled]
+    [handleChange, onPaste]
   );
 
   useEffect(() => {
@@ -68,18 +67,27 @@ const TextBox: React.FC<TextBoxProps> = ({
     }
   }, [value]);
 
+  const containerCls = useMemo(() => clsx(styles.container, className), [
+    className,
+  ]);
+
+  const placeholderCls = useMemo(
+    () => clsx(styles.placeholder, filled && styles.hidden),
+    [filled]
+  );
+
   return (
-    <div className={styles.textContainer}>
+    <div className={containerCls}>
       <div
         ref={textRef}
         role='textbox'
-        className={styles.textEditor}
+        className={styles.editor}
         contentEditable
         onInput={handleChange}
         onBlur={handleChange}
         onPaste={handlePaste}
       />
-      <div className={textPlaceholderClasses}>{placeholder}</div>
+      <div className={placeholderCls}>{placeholder}</div>
     </div>
   );
 };

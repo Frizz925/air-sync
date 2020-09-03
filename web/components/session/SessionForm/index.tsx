@@ -18,6 +18,7 @@ import {
   faImage as faImageSolid,
   faTimes,
 } from '@fortawesome/free-solid-svg-icons';
+import clsx from 'clsx';
 import each from 'lodash/each';
 import React, { useRef, useState } from 'react';
 import styles from './styles.module.css';
@@ -41,6 +42,8 @@ export interface SessionFormProps {
 const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
   const [valid, setValid] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
   const [textMessage, setTextMessage] = useState('');
   const [sensitive, setSensitive] = useState(false);
   const [imageSrc, setImageSrc] = useState('');
@@ -66,14 +69,20 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
     setTextMessage(value);
   };
 
-  const handleTextPaste = (evt: React.ClipboardEvent) => {
-    each(evt.clipboardData.items, (item) => {
-      if (item.type.startsWith('text/')) return;
+  const handleDataTransferItems = (
+    items: DataTransferItemList,
+    paste: boolean
+  ) => {
+    each(items, (item) => {
+      if (paste && item.type.startsWith('text/')) return;
       const image = item.type.startsWith('image/');
       handleAttachmentFile(item.getAsFile(), image);
       return false;
     });
   };
+
+  const handleTextPaste = (evt: React.ClipboardEvent) =>
+    handleDataTransferItems(evt.clipboardData.items, true);
 
   const handleSend = async () => {
     if (!valid || processing) return;
@@ -160,12 +169,43 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
   };
 
   const handleImage = () => openFilePrompt(true);
+
   const handleFile = () => openFilePrompt(false);
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(true);
+  };
+
+  const handleDragLeave = () => setDragging(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleDataTransferItems(e.dataTransfer.items, false);
+    setDragging(false);
+  };
+
+  const textContainerCls = clsx(
+    'px-2 py-4 border-dashed border-transparent border-2',
+    dragging && 'border-blue-700'
+  );
+
+  const textBoxCls = clsx(dragging && 'pointer-events-none');
 
   return (
     <Card className='card py-2 space-y-2'>
-      <div className='px-2'>
+      <div
+        className={textContainerCls}
+        draggable
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <TextBox
+          className={textBoxCls}
           value={textMessage}
           placeholder='Type your message here'
           onChange={handleTextChange}
