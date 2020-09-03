@@ -18,6 +18,7 @@ import {
   faImage as faImageSolid,
   faTimes,
 } from '@fortawesome/free-solid-svg-icons';
+import each from 'lodash/each';
 import React, { useRef, useState } from 'react';
 import styles from './styles.module.css';
 
@@ -65,6 +66,15 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
     setTextMessage(value);
   };
 
+  const handleTextPaste = (evt: React.ClipboardEvent) => {
+    each(evt.clipboardData.items, (item) => {
+      if (item.type.startsWith('text/')) return;
+      const image = item.type.startsWith('image/');
+      handleAttachmentFile(item.getAsFile(), image);
+      return false;
+    });
+  };
+
   const handleSend = async () => {
     if (!valid || processing) return;
     setProcessing(true);
@@ -96,15 +106,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
     input.click();
   };
 
-  const handleFileChange = () => {
-    const input = fileInputRef.current;
-    const files = input.files;
-    if (files.length <= 0) {
-      setAttachment({});
-      return;
-    }
-    const image = input.accept.startsWith('image/');
-    const file = files[0];
+  const handleAttachmentFile = (file: File, image: boolean) => {
     if (image) handleFileImage(file);
     attachmentRef.current = {
       file: file,
@@ -114,6 +116,17 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
     };
     setAttachment({ file: !image, image });
     handleValid(textMessage, file);
+  };
+
+  const handleFileChange = () => {
+    const input = fileInputRef.current;
+    const files = input.files;
+    if (files.length <= 0) {
+      setAttachment({});
+      return;
+    }
+    const image = input.accept.startsWith('image/');
+    handleAttachmentFile(files[0], image);
   };
 
   const handleFileClear = () => {
@@ -156,6 +169,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
           value={textMessage}
           placeholder='Type your message here'
           onChange={handleTextChange}
+          onPaste={handleTextPaste}
         />
       </div>
       {imageSrc && (

@@ -12,9 +12,15 @@ export interface TextBoxProps {
   value: string;
   placeholder?: string;
   onChange?: (value: string) => void;
+  onPaste?: (evt: React.ClipboardEvent) => void;
 }
 
-const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
+const TextBox: React.FC<TextBoxProps> = ({
+  value,
+  placeholder,
+  onChange,
+  onPaste,
+}) => {
   const [filled, setFilled] = useState(false);
   const textRef = useRef<HTMLDivElement>();
   const valueRef = useRef('');
@@ -44,6 +50,7 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
       const value = e.clipboardData.getData('text/plain');
       document.execCommand('inserttext', false, value);
       handleValue(value);
+      if (onPaste) onPaste(e);
     },
     [handleChange]
   );
