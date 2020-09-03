@@ -3,7 +3,6 @@ package app
 import (
 	"air-sync/handlers"
 	"air-sync/services"
-	"air-sync/storages"
 	"context"
 	"net/url"
 
@@ -24,8 +23,9 @@ type MonolithicApplication struct {
 	GooglePubSub services.GooglePubSubOptions
 	EventService string
 
-	BucketName string
-	UploadsDir string
+	StorageMode string
+	BucketName  string
+	UploadsDir  string
 
 	EnableCORS bool
 }
@@ -43,20 +43,14 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 	defer repos.Deinitialize()
 
 	storageService := services.NewStorageService(ctx, services.StorageOptions{
-		BucketName: s.BucketName,
-		UploadsDir: s.UploadsDir,
+		StorageMode: s.StorageMode,
+		BucketName:  s.BucketName,
+		UploadsDir:  s.UploadsDir,
 	})
 	if err := storageService.Initialize(); err != nil {
 		return err
 	}
 	defer storageService.Deinitialize()
-	// HACK: Not calling initialize for our cache storage
-	// because the underlying storages' lifecycle have
-	// already been managed by the storage service itself
-	storage := storages.NewCacheStorage(
-		storageService.FileStorage(),
-		storageService.CloudStorage(),
-	)
 
 	eventBroker := services.NewEventBrokerService(ctx, services.EventBrokerOptions{
 		Service:      s.EventService,
@@ -94,7 +88,7 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 
 	handlers.NewAttachmentHandler(
 		repos.AttachmentRepository(),
-		storage,
+		storageService.Storage(),
 	).RegisterRoutes(router)
 
 	handlers.NewWebHandler(handlers.WebOptions{
