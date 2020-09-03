@@ -1,0 +1,21 @@
+.text.sensitive {
+  @apply bg-gray-900 text-gray-900 cursor-pointer;
+
+  user-select: none;
+}
+
+.text.sensitive.revealed {
+  @apply bg-opacity-50 text-gray-300;
+}
+
+.imageContainer {
+  @apply relative overflow-hidden;
+}
+
+.imageContainer.sensitive {
+  @apply cursor-pointer;
+}
+
+.image.sensitive.unrevealed {
+  filter: blur(50px);
+}
