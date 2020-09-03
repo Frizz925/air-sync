@@ -110,7 +110,7 @@ func (rwc *CacheReadWriteCloser) Read(b []byte) (int, error) {
 	if err != nil {
 		return n, err
 	}
-	if _, err := rwc.Write(b); err != nil {
+	if _, err := rwc.Write(b[:n]); err != nil {
 		return n, err
 	}
 	return n, nil
