@@ -1,9 +1,9 @@
 package models
 
 type BaseAttachment struct {
-	Filename string `json:"filename"`
-	Type     string `json:"type"`
-	Mime     string `json:"mime"`
+	Type string `json:"type"`
+	Mime string `json:"mime"`
+	Name string `json:"name"`
 }
 
 type Attachment struct {
@@ -18,12 +18,12 @@ type CreateAttachment struct {
 
 var EmptyAttachment = Attachment{}
 
-func NewCreateAttachment(filename string, atype string, mime string) CreateAttachment {
+func NewCreateAttachment(name string, typ string, mime string) CreateAttachment {
 	return CreateAttachment{
 		BaseAttachment: BaseAttachment{
-			Filename: filename,
-			Type:     atype,
-			Mime:     mime,
+			Name: name,
+			Type: typ,
+			Mime: mime,
 		},
 	}
 }

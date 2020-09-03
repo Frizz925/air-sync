@@ -1,5 +1,6 @@
 /.vscode
 /public
+/uploads
 
 credentials.json
 .env.development

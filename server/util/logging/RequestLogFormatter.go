@@ -22,5 +22,7 @@ func NewRequestLogFormatter(fmt log.Formatter, req *http.Request) *RequestLogFor
 
 func (f *RequestLogFormatter) Format(e *log.Entry) ([]byte, error) {
 	e.Data["client"] = f.request.RemoteAddr
+	e.Data["method"] = f.request.Method
+	e.Data["path"] = f.request.URL.Path
 	return f.Formatter.Format(e)
 }

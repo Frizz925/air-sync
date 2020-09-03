@@ -30,14 +30,16 @@ func FromInsertMessageModel(insert models.InsertMessage) Message {
 	return message
 }
 
-func ToMessageModel(message Message) models.Message {
+func ToMessageModel(message Message, attachment Attachment) models.Message {
 	return models.Message{
 		BaseMessage: models.BaseMessage{
 			Sensitive:    message.Sensitive,
 			Body:         message.Body,
 			AttachmentID: message.AttachmentID,
 		},
-		ID:        message.ID,
-		CreatedAt: message.CreatedAt,
+		ID:             message.ID,
+		AttachmentType: attachment.Type,
+		AttachmentName: attachment.Name,
+		CreatedAt:      message.CreatedAt,
 	}
 }

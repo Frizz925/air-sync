@@ -3,6 +3,7 @@ package app
 import (
 	"air-sync/handlers"
 	"air-sync/services"
+	"air-sync/storages"
 	"context"
 	"net/url"
 
@@ -15,12 +16,18 @@ type MongoOptions struct {
 }
 
 type MonolithicApplication struct {
-	Addr         string
-	Mongo        MongoOptions
+	Addr string
+
+	Mongo MongoOptions
+
 	Redis        services.RedisOptions
 	GooglePubSub services.GooglePubSubOptions
 	EventService string
-	EnableCORS   bool
+
+	BucketName string
+	UploadsDir string
+
+	EnableCORS bool
 }
 
 var _ Application = (*MonolithicApplication)(nil)
@@ -35,15 +42,31 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 	}
 	defer repos.Deinitialize()
 
+	storageService := services.NewStorageService(ctx, services.StorageOptions{
+		BucketName: s.BucketName,
+		UploadsDir: s.UploadsDir,
+	})
+	if err := storageService.Initialize(); err != nil {
+		return err
+	}
+	defer storageService.Deinitialize()
+	storage := storages.NewCacheStorage(
+		storageService.FileStorage(),
+		storageService.CloudStorage(),
+	)
+
 	eventBroker := services.NewEventBrokerService(ctx, services.EventBrokerOptions{
 		Service:      s.EventService,
 		Redis:        s.Redis,
 		GooglePubSub: s.GooglePubSub,
 	})
-	eventBroker.Initialize()
+	if err := eventBroker.Initialize(); err != nil {
+		return err
+	}
 	defer eventBroker.Deinitialize()
 
 	router := mux.NewRouter()
+
 	handlers.NewApiHandler(
 		handlers.NewSessionRestHandler(
 			repos.SessionRepository(),
@@ -51,6 +74,7 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 		),
 		handlers.QrRestHandler(0),
 	).RegisterRoutes(router)
+
 	handlers.NewWebSocketHandler(handlers.WebSocketOptions{
 		Repository: repos.SessionRepository(),
 		Publisher:  eventBroker.Publisher(),
@@ -64,6 +88,12 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 		repos.SessionRepository(),
 		eventBroker.Publisher(),
 	).RegisterRoutes(router)
+
+	handlers.NewAttachmentHandler(
+		repos.AttachmentRepository(),
+		storage,
+	).RegisterRoutes(router)
+
 	handlers.NewWebHandler(handlers.WebOptions{
 		PublicPath:   "public",
 		IndexFile:    "index.html",

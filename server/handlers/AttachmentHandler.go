@@ -6,6 +6,7 @@ import (
 	"air-sync/storages"
 	"air-sync/util"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -34,7 +35,9 @@ func (h *AttachmentHandler) RegisterRoutes(r *mux.Router) {
 }
 
 func (h *AttachmentHandler) UploadAttachment(req *http.Request) (*util.RestResponse, error) {
-	req.ParseMultipartForm(2 << 20)
+	if err := req.ParseMultipartForm(2 << 20); err != nil {
+		return h.requestError(req, err)
+	}
 	file, header, err := req.FormFile("file")
 	if err != nil {
 		return h.requestError(req, err)
@@ -49,24 +52,30 @@ func (h *AttachmentHandler) UploadAttachment(req *http.Request) (*util.RestRespo
 
 	filename := header.Filename
 	mime := http.DetectContentType(buf)
-	atype := req.URL.Query().Get("type")
-	attachment, err := h.repo.Create(models.NewCreateAttachment(filename, atype, mime))
+	typ := req.URL.Query().Get("type")
+	attachment, err := h.repo.Create(models.NewCreateAttachment(filename, typ, mime))
 	if err != nil {
 		return nil, err
 	}
 
+	logger := util.RequestLogger(req)
 	w, err := h.storage.Write(attachment.ID)
 	if err != nil {
 		return nil, err
 	}
 	defer w.Close()
+
 	if _, err := w.Write(buf[:n]); err != nil {
 		return nil, err
 	}
 	if _, err := io.Copy(w, file); err != nil {
 		return nil, err
 	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
 
+	logger.WithField("attachment_id", attachment.ID).Info("Attachment uploaded")
 	return &util.RestResponse{
 		Message: "Attachment uploaded",
 		Data:    attachment,
@@ -92,11 +101,16 @@ func (h *AttachmentHandler) DownloadAttachment(req *http.Request) (*util.Respons
 	if err != nil {
 		return nil, err
 	}
+	header := make(http.Header)
+	header.Set("Content-Type", attachment.Mime)
+	if attachment.Type == "file" {
+		header.Set(
+			"Content-Disposition",
+			fmt.Sprintf("attachment; filename=\"%s\"", attachment.Name),
+		)
+	}
 	return &util.Response{
-		Header: http.Header{
-			"Content-Type":        []string{attachment.Mime},
-			"Content-Disposition": []string{"attachment", "filename=" + attachment.Filename},
-		},
+		Header:     header,
 		BodyStream: r,
 	}, nil
 }

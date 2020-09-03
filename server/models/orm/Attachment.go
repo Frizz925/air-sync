@@ -8,9 +8,9 @@ import (
 
 type Attachment struct {
 	ID        string `gorm:"primaryKey"`
-	Filename  string `gorm:"not null"`
 	Type      string `gorm:"not null"`
 	Mime      string `gorm:"not null"`
+	Name      string `gorm:"not null"`
 	CreatedAt int64  `gorm:"autoCreateTime"`
 }
 
@@ -24,17 +24,17 @@ func NewAttachment() Attachment {
 func FromCreateAttachmentModel(create models.CreateAttachment) Attachment {
 	attachment := NewAttachment()
 	attachment.Type = create.Type
-	attachment.Filename = create.Filename
 	attachment.Mime = create.Mime
+	attachment.Name = create.Name
 	return attachment
 }
 
 func ToAttachmentModel(attachment Attachment) models.Attachment {
 	return models.Attachment{
 		BaseAttachment: models.BaseAttachment{
-			Type:     attachment.Type,
-			Filename: attachment.Filename,
-			Mime:     attachment.Mime,
+			Type: attachment.Type,
+			Mime: attachment.Mime,
+			Name: attachment.Name,
 		},
 		ID:        attachment.ID,
 		CreatedAt: attachment.CreatedAt,

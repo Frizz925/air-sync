@@ -5,31 +5,44 @@ import (
 	"context"
 )
 
+type StorageOptions struct {
+	BucketName string
+	UploadsDir string
+}
+
 type StorageService struct {
-	storage storages.Storage
+	fileStorage  *storages.FileStorage
+	cloudStorage *storages.GoogleCloudStorage
 }
 
 var _ Service = (*StorageService)(nil)
 
-func NewStorageService(ctx context.Context, bucketName string) *StorageService {
+func NewStorageService(ctx context.Context, opts StorageOptions) *StorageService {
 	return &StorageService{
-		storage: storages.NewGoogleCloudStorage(ctx, bucketName),
+		fileStorage:  storages.NewFileStorage(opts.UploadsDir),
+		cloudStorage: storages.NewGoogleCloudStorage(ctx, opts.BucketName),
 	}
 }
 
 func (s *StorageService) Initialize() error {
-	if v, ok := s.storage.(storages.Initializer); ok {
-		return v.Initialize()
+	if err := s.fileStorage.Initialize(); err != nil {
+		return err
+	}
+	if err := s.cloudStorage.Initialize(); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (s *StorageService) Deinitialize() {
-	if v, ok := s.storage.(storages.Initializer); ok {
-		v.Deinitialize()
-	}
+	s.fileStorage.Deinitialize()
+	s.cloudStorage.Deinitialize()
 }
 
-func (s *StorageService) Storage() storages.Storage {
-	return s.storage
+func (s *StorageService) FileStorage() *storages.FileStorage {
+	return s.fileStorage
+}
+
+func (s *StorageService) CloudStorage() *storages.GoogleCloudStorage {
+	return s.cloudStorage
 }

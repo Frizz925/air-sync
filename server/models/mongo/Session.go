@@ -20,11 +20,7 @@ func NewSession() Session {
 	}
 }
 
-func ToSessionModel(session Session) models.Session {
-	messages := make([]models.Message, len(session.Messages))
-	for index, message := range session.Messages {
-		messages[index] = ToMessageModel(message)
-	}
+func ToSessionModel(session Session, messages []models.Message) models.Session {
 	return models.Session{
 		ID:        session.ID,
 		Messages:  messages,

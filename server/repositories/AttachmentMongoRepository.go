@@ -2,13 +2,14 @@ package repositories
 
 import (
 	"air-sync/models"
+	mongoModels "air-sync/models/mongo"
 	"context"
-	"errors"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var ErrNotImplemented = errors.New("Not implemented")
+var MongoAttachmentCollection = "attachments"
 
 type AttachmentMongoRepository struct {
 	*MongoRepository
@@ -22,18 +23,38 @@ func NewAttachmentMongoRepository(ctx context.Context, db *mongo.Database) *Atta
 	return &AttachmentMongoRepository{
 		MongoRepository: NewMongoRepository(db),
 		context:         ctx,
-		attachments:     db.Collection("attachments"),
+		attachments:     db.Collection(MongoAttachmentCollection),
 	}
 }
 
 func (r *AttachmentMongoRepository) Create(arg models.CreateAttachment) (models.Attachment, error) {
-	return models.EmptyAttachment, ErrNotImplemented
+	attachment := mongoModels.FromCreateAttachmentModel(arg)
+	_, err := r.attachments.InsertOne(r.context, attachment)
+	return mongoModels.ToAttachmentModel(attachment), err
 }
 
 func (r *AttachmentMongoRepository) Find(id string) (models.Attachment, error) {
-	return models.EmptyAttachment, ErrNotImplemented
+	cur, err := r.attachments.Find(r.context, bson.M{"_id": id})
+	if err != nil {
+		return models.EmptyAttachment, err
+	}
+	defer cur.Close(r.context)
+	if !cur.Next(r.context) {
+		return models.EmptyAttachment, ErrAttachmentNotFound
+	}
+	attachment := mongoModels.Attachment{}
+	if err := cur.Decode(&attachment); err != nil {
+		return models.EmptyAttachment, err
+	}
+	return mongoModels.ToAttachmentModel(attachment), nil
 }
 
 func (r *AttachmentMongoRepository) Delete(id string) error {
-	return ErrNotImplemented
+	res, err := r.attachments.DeleteOne(r.context, bson.M{"_id": id})
+	if err != nil {
+		return err
+	} else if res.DeletedCount <= 0 {
+		return ErrAttachmentNotFound
+	}
+	return nil
 }

@@ -42,21 +42,23 @@ var rootCmd = &cobra.Command{
 		}
 
 		err = (&app.MonolithicApplication{
-			Addr: ":" + util.EnvPort(),
+			Addr: ":" + util.GetEnvDefault("PORT", "8080"),
 			Mongo: app.MongoOptions{
 				URL:      mongoUrl,
-				Database: util.EnvMongoDatabase(),
+				Database: util.GetEnvDefault("MONGODB_DATABASE", "airsync"),
 			},
+			BucketName: util.GetEnvDefault("BUCKET_NAME", "airsync"),
+			UploadsDir: util.GetEnvDefault("UPLOADS_DIR", "uploads"),
 			Redis: services.RedisOptions{
-				Addr:     util.EnvRedisAddr(),
-				Password: util.EnvRedisPassword(),
+				Addr:     util.GetEnvDefault("REDIS_ADDR", "localhost:6379"),
+				Password: util.GetEnvDefault("REDIS_PASSWORD", ""),
 			},
 			GooglePubSub: services.GooglePubSubOptions{
 				ProjectID:      gcp.EnvProjectID(),
 				TopicID:        gcp.EnvPubSubTopicID(),
 				SubscriptionID: gcp.EnvPubSubSubscriptionID(),
 			},
-			EventService: util.EnvEventService(),
+			EventService: util.GetEnvDefault("EVENT_SERVICE", ""),
 			EnableCORS:   enableCORS,
 		}).Start(ctx)
 		if err != nil {

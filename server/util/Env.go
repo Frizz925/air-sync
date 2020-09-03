@@ -20,32 +20,12 @@ func GetEnvDefault(name string, def string) string {
 	return def
 }
 
-func EnvPort() string {
-	return GetEnvDefault("PORT", "8080")
-}
-
 func EnvMongoUri() string {
 	return GetEnvDefault("MONGODB_URI", "mongodb://localhost:27017")
 }
 
 func EnvMongoUrl() (*url.URL, error) {
 	return url.Parse(EnvMongoUri())
-}
-
-func EnvMongoDatabase() string {
-	return GetEnvDefault("MONGODB_DATABASE", "airsync")
-}
-
-func EnvRedisAddr() string {
-	return GetEnvDefault("REDIS_ADDR", "localhost:6379")
-}
-
-func EnvRedisPassword() string {
-	return os.Getenv("REDIS_PASSWORD")
-}
-
-func EnvEventService() string {
-	return GetEnvDefault("EVENT_SERVICE", "Local")
 }
 
 func SetupCredentialsEnv() error {

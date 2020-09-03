@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 
+	log "github.com/sirupsen/logrus"
+
 	. "cloud.google.com/go/storage"
 )
 
@@ -29,6 +31,7 @@ func (s *GoogleCloudStorage) Initialize() error {
 		return err
 	}
 	s.bucket = client.Bucket(s.bucketName)
+	log.Infof("Using Google Cloud Storage: %s", s.bucketName)
 	return nil
 }
 

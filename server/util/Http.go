@@ -62,6 +62,7 @@ func WrapHandlerFunc(handler RequestHandlerFunc) http.HandlerFunc {
 		req = DecorateRequest(req)
 		res, err := handler(req)
 		if err != nil {
+			RequestLogger(req).Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -107,6 +108,7 @@ func WrapRestHandlerFunc(handler RestHandlerFunc) http.HandlerFunc {
 	return WrapJsonHandlerFunc(func(req *http.Request) (*JsonResponse, error) {
 		res, err := handler(req)
 		if err != nil {
+			RequestLogger(req).Error(err)
 			res = &RestResponse{
 				StatusCode: http.StatusInternalServerError,
 				Error:      err.Error(),

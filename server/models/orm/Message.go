@@ -12,6 +12,7 @@ type Message struct {
 	Sensitive    bool   `gorm:"not null"`
 	Body         string
 	AttachmentID string
+	Attachment   Attachment
 	CreatedAt    int64 `gorm:"autoCreateTime"`
 }
 
@@ -39,7 +40,9 @@ func ToMessageModel(message Message) models.Message {
 			Body:         message.Body,
 			AttachmentID: message.AttachmentID,
 		},
-		ID:        message.ID,
-		CreatedAt: message.CreatedAt,
+		ID:             message.ID,
+		AttachmentType: message.Attachment.Type,
+		AttachmentName: message.Attachment.Name,
+		CreatedAt:      message.CreatedAt,
 	}
 }
