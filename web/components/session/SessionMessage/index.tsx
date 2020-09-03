@@ -55,12 +55,14 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
         <div>
           <IconButton icon={faCopy} onClick={handleCopy} />
         </div>
-        {attachmentType === 'file' && (
+        {attachmentId && (
           <div className='flex items-center overflow-hidden'>
             <a
               href={getAttachmentUrl(attachmentId)}
               title={attachmentName}
               download={attachmentName}
+              target='_blank'
+              rel='noreferrer'
             >
               <IconButton icon={faDownload} />
             </a>
