@@ -218,7 +218,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
         </div>
       )}
       {attachmentRef.current && (
-        <div className='flex justify-start items-center text-xs overflow-hidden px-1'>
+        <div className='flex items-center text-xs overflow-hidden px-1'>
           <IconButton icon={faTimes} color='red' onClick={handleFileClear} />
           <div className={styles.filename}>{attachmentRef.current.name}</div>
         </div>

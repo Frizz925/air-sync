@@ -8,7 +8,7 @@ export interface IconButtonProps {
   size?: string | number;
   color?: string;
   icon: IconProp;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 const IconButton: React.FC<IconButtonProps> = ({

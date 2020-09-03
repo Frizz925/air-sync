@@ -4,9 +4,12 @@ import Card from '@/components/common/Card';
 import IconButton from '@/components/common/IconButton';
 import * as Clipboard from '@/utils/Clipboard';
 import { formatShortTimestamp, formatTimestamp } from '@/utils/Time';
+import { getAttachmentUrl } from '@/utils/Url';
 import { faCopy, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
+import { faCloudDownloadAlt as faDownload } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 import MessageContent from '../MessageContent';
+import styles from './styles.module.css';
 
 export interface SessionMessageProps {
   api: SessionApi;
@@ -21,6 +24,12 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
   message,
   timestamp,
 }) => {
+  const {
+    attachment_id: attachmentId,
+    attachment_name: attachmentName,
+    attachment_type: attachmentType,
+    created_at: createdAt,
+  } = message;
   const handleCopy = () => Clipboard.copy(message.body);
 
   const handleDelete = async () => {
@@ -36,16 +45,32 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
       <div className='pt-2 space-y-2'>
         <div
           className='px-2 text-xs opacity-50 cursor-default'
-          title={formatTimestamp(message.created_at)}
+          title={formatTimestamp(createdAt)}
         >
-          {formatShortTimestamp(message.created_at, timestamp)}
+          {formatShortTimestamp(createdAt, timestamp)}
         </div>
         <MessageContent message={message} />
       </div>
-      <div className='flex justify-start items-stretch px-1 py-1'>
-        <IconButton icon={faCopy} onClick={handleCopy} />
+      <div className='flex items-center px-1 py-1'>
+        <div>
+          <IconButton icon={faCopy} onClick={handleCopy} />
+        </div>
+        {attachmentType === 'file' && (
+          <div className='flex items-center overflow-hidden'>
+            <a
+              href={getAttachmentUrl(attachmentId)}
+              title={attachmentName}
+              download={attachmentName}
+            >
+              <IconButton icon={faDownload} />
+            </a>
+            <div className={styles.attachmentName}>{attachmentName}</div>
+          </div>
+        )}
         <div className='flex-grow'></div>
-        <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
+        <div>
+          <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
+        </div>
       </div>
     </Card>
   );

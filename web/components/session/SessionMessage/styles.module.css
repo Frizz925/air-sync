@@ -1,0 +1,5 @@
+.attachmentName {
+  @apply text-xs whitespace-no-wrap opacity-75 overflow-hidden;
+
+  text-overflow: ellipsis;
+}
