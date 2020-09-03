@@ -1,5 +1,6 @@
 import { MessageDeleted, MessageInserted } from '@/api/models/Events';
 import Message from '@/api/models/Message';
+import RestResponse from '@/api/models/RestResponse';
 import SessionEvent from '@/api/models/SessionEvent';
 import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
@@ -170,7 +171,7 @@ export default function SessionPage() {
       setConnectionState(ConnectionState.CONNECTED);
       const resp = await lpClient.get(`/sessions/${sessionId}`);
       if (resp.status === 200) {
-        const event = resp.data as SessionEvent<unknown>;
+        const event = (resp.data as RestResponse<SessionEvent<any>>).data;
         handleSessionEvent(event);
       }
     } catch (err) {
