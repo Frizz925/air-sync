@@ -1,5 +1,10 @@
 import { IS_DEV } from './Env';
 
+export const getAttachmentUrl = (id: string) => {
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}/attachments/${id}`;
+};
+
 export const getBaseUrl = (webSocket: boolean = false) => {
   let scheme = getScheme();
   if (webSocket) {

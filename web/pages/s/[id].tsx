@@ -17,10 +17,13 @@ import SessionForm from '@/components/session/SessionForm';
 import SessionIndicator from '@/components/session/SessionIndicator';
 import SessionMessage from '@/components/session/SessionMessage';
 import { NotificationHelper } from '@/utils/Notification';
+import { getAttachmentUrl, getBaseUrl } from '@/utils/Url';
 import map from 'lodash/map';
 import { useRouter } from 'next/router';
 import { resolve } from 'path';
 import React, { useEffect, useRef, useState } from 'react';
+
+const baseUrl = getBaseUrl();
 
 const apiClient = createApiClient();
 const lpClient = createLongPollingClient();
@@ -50,11 +53,15 @@ export default function SessionPage() {
 
   const messagesRef = useRef<Message[]>([]);
   const handleMessage = (message: Message) => {
-    notificationHelper.notify(document.title, message.body);
+    const attachmentUrl =
+      message.attachment_id && getAttachmentUrl(message.attachment_id);
+    notificationHelper.notify(document.title, message.body, attachmentUrl);
     const newMessages = [message, ...messagesRef.current];
     setMessages(newMessages);
     messagesRef.current = newMessages;
   };
+
+  const handleDeletedSession = () => router.push('/');
 
   const handleInsertedMessage = (event: MessageInserted) => {
     handleMessage(event.message);
@@ -68,8 +75,11 @@ export default function SessionPage() {
     messagesRef.current = newMessages;
   };
 
-  const handleSessionEvent = ({ event: name, data }: SessionEvent<any>) => {
-    switch (name) {
+  const handleSessionEvent = ({ event, data }: SessionEvent<any>) => {
+    switch (event) {
+      case 'session.deleted':
+        handleDeletedSession();
+        break;
       case 'message.inserted':
         handleInsertedMessage(data as MessageInserted);
         break;

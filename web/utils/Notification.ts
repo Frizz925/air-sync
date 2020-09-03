@@ -16,8 +16,8 @@ export class NotificationHelper {
     );
   }
 
-  public notify(title: string, body: string) {
+  public notify(title: string, body: string, image?: string) {
     if (!this.notificationAllowed) return;
-    new Notification(title, { body });
+    new Notification(title, { body, image });
   }
 }

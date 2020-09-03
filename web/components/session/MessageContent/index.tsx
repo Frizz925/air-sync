@@ -1,8 +1,6 @@
 import Message from '@/api/models/Message';
-import { getBaseUrl } from '@/utils/Url';
+import { getAttachmentUrl } from '@/utils/Url';
 import React from 'react';
-
-const baseUrl = getBaseUrl();
 
 export interface MessageContentProps {
   message: Message;
@@ -20,7 +18,7 @@ const MessageContent: React.FC<MessageContentProps> = ({ message }) => {
 const MessageAttachment: React.FC<{ message: Message }> = ({
   message: { attachment_id: id, attachment_type: type },
 }) => {
-  const url = `${baseUrl}/attachments/${id}`;
+  const url = getAttachmentUrl(id);
   return type === 'image' ? (
     <div className='flex justify-center'>
       <img src={url} />
