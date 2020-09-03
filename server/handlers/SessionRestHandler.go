@@ -31,7 +31,7 @@ func (h *SessionRestHandler) RegisterRoutes(r *mux.Router) {
 	s.HandleFunc("/{id}", h.WrapSessionHandlerFunc(h.GetSession)).Methods("GET")
 	s.HandleFunc("/{id}", util.WrapRestHandlerFunc(h.DeleteSession)).Methods("DELETE")
 	s.HandleFunc("/{id}", util.WrapRestHandlerFunc(h.InsertMessage)).Methods("PUT")
-	s.HandleFunc("/{id}/{messageID}", util.WrapRestHandlerFunc(h.DeleteMessage)).Methods("DELETE")
+	s.HandleFunc("/{id}/{message-id}", util.WrapRestHandlerFunc(h.DeleteMessage)).Methods("DELETE")
 }
 
 func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestResponse, error) {
@@ -104,7 +104,7 @@ func (h *SessionRestHandler) InsertMessage(req *http.Request) (*util.RestRespons
 func (h *SessionRestHandler) DeleteMessage(req *http.Request) (*util.RestResponse, error) {
 	vars := mux.Vars(req)
 	sessionID := vars["id"]
-	messageID := vars["messageID"]
+	messageID := vars["message-id"]
 	if err := h.repo.DeleteMessage(sessionID, messageID); err != nil {
 		return h.HandleSessionRestError(err)
 	}
