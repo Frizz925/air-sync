@@ -4,6 +4,7 @@ import (
 	"air-sync/models/events"
 	"air-sync/util/pubsub"
 	"context"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -101,10 +102,13 @@ func (s *EventBrokerService) handleSessionEvent(v interface{}) error {
 	s.pub.Topic(event.Event).Publish(event.Value)
 	s.pub.Topic(events.EventSessionID(event.SessionID)).Publish(event)
 
-	// post-publish
 	switch event.Event {
 	case events.EventSessionDeleted:
-		s.pub.Topic(events.EventSessionID(event.SessionID)).Close()
+		// Give grace period of 30 seconds before closing the topic
+		go func() {
+			time.Sleep(30 * time.Second)
+			s.pub.Topic(events.EventSessionID(event.SessionID)).Close()
+		}()
 	}
 
 	return nil
