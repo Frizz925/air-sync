@@ -18,6 +18,7 @@ import SessionIndicator from '@/components/session/SessionIndicator';
 import SessionMessage from '@/components/session/SessionMessage';
 import { NotificationHelper } from '@/utils/Notification';
 import { getAttachmentUrl, getBaseUrl } from '@/utils/Url';
+import { AxiosError } from 'axios';
 import map from 'lodash/map';
 import { useRouter } from 'next/router';
 import { resolve } from 'path';
@@ -39,17 +40,19 @@ notificationHelper.initialize();
 
 export default function SessionPage() {
   const router = useRouter();
-  const handleError = (error: Error) => {
-    console.error(error);
-    router.push('/');
-  };
 
-  const [running, setRunning] = useState(true);
   const [connectionState, setConnectionState] = useState(
     ConnectionState.DISCONNECTED
   );
   const [messages, setMessages] = useState<Message[]>([]);
   const [timestamp, setTimestamp] = useState<number>(new Date().getTime());
+
+  const runningRef = useRef(true);
+  const handleError = (error: Error) => {
+    console.error(error);
+    runningRef.current = false;
+    router.push('/');
+  };
 
   const messagesRef = useRef<Message[]>([]);
   const handleMessage = (message: Message) => {
@@ -61,7 +64,10 @@ export default function SessionPage() {
     messagesRef.current = newMessages;
   };
 
-  const handleDeletedSession = () => router.push('/');
+  const handleDeletedSession = () => {
+    runningRef.current = false;
+    router.push('/');
+  };
 
   const handleInsertedMessage = (event: MessageInserted) => {
     handleMessage(event.message);
@@ -109,7 +115,7 @@ export default function SessionPage() {
         return;
       }
 
-      if (!running) {
+      if (!runningRef.current) {
         resolve();
         return;
       }
@@ -146,7 +152,7 @@ export default function SessionPage() {
         return;
       }
 
-      if (!running) {
+      if (!runningRef.current) {
         resolve();
         return;
       }
@@ -174,7 +180,7 @@ export default function SessionPage() {
     });
 
   const doLongPolling = async (sessionId: string) => {
-    if (!running) return;
+    if (!runningRef.current) return;
     let hasError = false;
     const start = new Date();
     try {
@@ -187,6 +193,12 @@ export default function SessionPage() {
     } catch (err) {
       setConnectionState(ConnectionState.DISCONNECTED);
       console.error(err);
+      if (err.response) {
+        const resp = (err as AxiosError).response;
+        if (resp.status === 404) {
+          return;
+        }
+      }
       hasError = true;
     }
     const end = new Date();
@@ -227,7 +239,7 @@ export default function SessionPage() {
   };
 
   const handleDelete = () => {
-    setRunning(false);
+    runningRef.current = false;
     router.push('/');
   };
 
