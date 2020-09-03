@@ -19,7 +19,7 @@ type Subscriber struct {
 	sender    chan interface{}
 	receivers []chan interface{}
 	cancel    context.CancelFunc
-	mu        sync.Mutex
+	mu        sync.RWMutex
 }
 
 func NewSubscriber(t *Topic, id int) *Subscriber {
@@ -39,11 +39,9 @@ func (s *Subscriber) ForEach(ctx context.Context, handler SubscriberFunc, errorH
 	for {
 		select {
 		case v := <-ch:
-			go func() {
-				if err := handler(v); err != nil {
-					errorHandler(err)
-				}
-			}()
+			if err := handler(v); err != nil {
+				errorHandler(err)
+			}
 		case <-ctx.Done():
 			return
 		}
@@ -71,11 +69,14 @@ func (s *Subscriber) start() {
 	for {
 		select {
 		case v := <-s.sender:
-			s.mu.Lock()
+			s.mu.RLock()
 			for _, ch := range s.receivers {
-				ch <- v
+				select {
+				case ch <- v:
+				default:
+				}
 			}
-			s.mu.Unlock()
+			s.mu.RUnlock()
 		case <-s.context.Done():
 			return
 		}
@@ -83,7 +84,10 @@ func (s *Subscriber) start() {
 }
 
 func (s *Subscriber) fire(v interface{}) {
-	s.sender <- v
+	select {
+	case s.sender <- v:
+	default:
+	}
 }
 
 func (s *Subscriber) cleanup() {
