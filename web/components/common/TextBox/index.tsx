@@ -57,7 +57,7 @@ const TextBox: React.FC<TextBoxProps> = ({ value, placeholder, onChange }) => {
     const oldValue = valueRef.current;
     if (oldValue !== value) {
       textRef.current.innerText = value;
-      handleFilled(value);
+      handleValue(value);
     }
   }, [value]);
 

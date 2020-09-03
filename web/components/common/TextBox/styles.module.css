@@ -1,18 +1,18 @@
 .textContainer {
   @apply relative w-full overflow-hidden;
-  @apply bg-gray-700 text-sm w-full p-2 rounded-md;
+  @apply text-sm w-full;
 }
 
 .textEditor {
   @apply overflow-hidden box-border outline-none;
 
-  direction: ltr;
   line-height: theme('height.6');
   min-height: theme('height.6');
 }
 
 .textPlaceholder {
-  @apply absolute top-0 left-0 p-2 pointer-events-none;
+  @apply absolute top-0 left-0;
+  @apply text-gray-600 font-semibold pointer-events-none;
 }
 
 .textPlaceholder.hidden {

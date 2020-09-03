@@ -2,8 +2,11 @@ import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
 import Dialog from '@/components/common/Dialog';
 import IconButton from '@/components/common/IconButton';
-import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
-import { faQrcode, faSync } from '@fortawesome/free-solid-svg-icons';
+import {
+  faQrcode,
+  faSync,
+  faTrashAlt,
+} from '@fortawesome/free-solid-svg-icons';
 import React, { useState } from 'react';
 
 export interface SessionActionsProps {
@@ -52,7 +55,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
 
   return (
     <React.Fragment>
-      <div className='flex flex-row px-2 py-2'>
+      <div className='flex flex-row px-1 py-2'>
         <IconButton icon={faQrcode} color='blue' onClick={handleQrImage} />
         <IconButton icon={faSync} color='blue' onClick={onReload} />
         <div className='flex-grow'></div>

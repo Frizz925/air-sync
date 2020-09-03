@@ -1,16 +1,16 @@
 interface Message {
   id: string;
-  type: string;
-  mime: string;
-  content: string;
+  sensitive: boolean;
+  body?: string;
+  attachment_id?: string;
+  attachment_type?: string;
+  attachment_name?: string;
   created_at: number;
 }
 
 export const DefaultMessage = (): Partial<Message> => ({
-  type: 'text',
-  mime: 'text/plain',
-  content: '',
-  created_at: new Date().getTime(),
+  sensitive: false,
+  created_at: new Date().getTime() / 1000,
 });
 
 export default Message;

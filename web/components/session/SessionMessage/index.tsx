@@ -6,6 +6,7 @@ import * as Clipboard from '@/utils/Clipboard';
 import { faCopy, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import moment from 'moment';
 import React from 'react';
+import MessageContent from '../MessageContent';
 
 export interface SessionMessageProps {
   api: SessionApi;
@@ -28,7 +29,7 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
   message,
   timestamp,
 }) => {
-  const handleCopy = () => Clipboard.copy(message.content);
+  const handleCopy = () => Clipboard.copy(message.body);
 
   const handleDelete = async () => {
     try {
@@ -40,14 +41,14 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
 
   return (
     <Card className='text-sm whitespace-pre-wrap'>
-      <div className='px-2 pt-2'>
+      <div className='pt-2 space-y-2'>
         <div
-          className='text-xs opacity-50 cursor-default'
+          className='px-2 text-xs opacity-50 cursor-default'
           title={formatTimestamp(message.created_at)}
         >
           {formatShortTimestamp(timestamp, message.created_at)}
         </div>
-        <div>{message.content}</div>
+        <MessageContent message={message} />
       </div>
       <div className='flex justify-start items-stretch px-1 py-1'>
         <IconButton icon={faCopy} onClick={handleCopy} />

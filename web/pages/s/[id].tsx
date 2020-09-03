@@ -1,3 +1,4 @@
+import { MessageDeleted, MessageInserted } from '@/api/models/Events';
 import Message from '@/api/models/Message';
 import SessionEvent from '@/api/models/SessionEvent';
 import QrImageApi from '@/api/QrImageApi';
@@ -48,15 +49,19 @@ export default function SessionPage() {
 
   const messagesRef = useRef<Message[]>([]);
   const handleMessage = (message: Message) => {
-    notificationHelper.notify(document.title, message.content);
+    notificationHelper.notify(document.title, message.body);
     const newMessages = [message, ...messagesRef.current];
     setMessages(newMessages);
     messagesRef.current = newMessages;
   };
 
-  const handleDeletedMessage = (messageId: string) => {
+  const handleInsertedMessage = (event: MessageInserted) => {
+    handleMessage(event.message);
+  };
+
+  const handleDeletedMessage = (event: MessageDeleted) => {
     const newMessages = [...messagesRef.current].filter(
-      (message) => message.id !== messageId
+      (message) => message.id !== event.message_id
     );
     setMessages(newMessages);
     messagesRef.current = newMessages;
@@ -64,11 +69,11 @@ export default function SessionPage() {
 
   const handleSessionEvent = ({ event: name, data }: SessionEvent<any>) => {
     switch (name) {
-      case 'message/insert':
-        handleMessage(data as Message);
+      case 'message.inserted':
+        handleInsertedMessage(data as MessageInserted);
         break;
-      case 'message/delete':
-        handleDeletedMessage(data as string);
+      case 'message.deleted':
+        handleDeletedMessage(data as MessageDeleted);
         break;
     }
   };

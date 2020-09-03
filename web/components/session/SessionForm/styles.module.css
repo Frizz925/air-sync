@@ -1,0 +1,6 @@
+.filename {
+  @apply whitespace-no-wrap overflow-hidden;
+  @apply opacity-75;
+
+  text-overflow: ellipsis;
+}
