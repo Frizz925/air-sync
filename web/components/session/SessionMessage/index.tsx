@@ -3,8 +3,8 @@ import SessionApi from '@/api/SessionApi';
 import Card from '@/components/common/Card';
 import IconButton from '@/components/common/IconButton';
 import * as Clipboard from '@/utils/Clipboard';
+import { formatShortTimestamp, formatTimestamp } from '@/utils/Time';
 import { faCopy, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
-import moment from 'moment';
 import React from 'react';
 import MessageContent from '../MessageContent';
 
@@ -14,14 +14,6 @@ export interface SessionMessageProps {
   message: Message;
   timestamp: number;
 }
-
-const formatTimestamp = (ts: number) => {
-  return moment(ts).format('YYYY-MM-DD hh:mm:ss');
-};
-
-const formatShortTimestamp = (from: number, ts: number) => {
-  return moment(ts).from(from, false);
-};
 
 const SessionMessage: React.FC<SessionMessageProps> = ({
   api,
@@ -46,7 +38,7 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
           className='px-2 text-xs opacity-50 cursor-default'
           title={formatTimestamp(message.created_at)}
         >
-          {formatShortTimestamp(timestamp, message.created_at)}
+          {formatShortTimestamp(message.created_at, timestamp)}
         </div>
         <MessageContent message={message} />
       </div>
