@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"air-sync/app"
+	"air-sync/services"
+	"air-sync/util"
+	"air-sync/util/gcp"
 	"context"
 	"os"
 	"os/signal"
@@ -19,7 +22,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "air-sync",
 	Short: "Air Sync is a small web application to quickly send messages over the internet",
-	Long: `Small and lightweight, Air Sync is aimed to send various messages 
+	Long: `Small and lightweight, Air Sync is aimed to send various messages
 		from one device to the other securely over the internet.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ch := make(chan os.Signal, 1)
@@ -32,17 +35,33 @@ var rootCmd = &cobra.Command{
 			cancel()
 		}()
 
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-			log.Infof("Defaulting to port %s", port)
+		mongoUrl, err := util.EnvMongoUrl()
+		if err != nil {
+			log.Fatal(err)
+			return
 		}
 
-		srv := &app.MonolithicService{
-			Addr:       ":" + port,
-			EnableCORS: enableCORS,
-		}
-		if err := srv.Start(ctx); err != nil {
+		err = (&app.MonolithicApplication{
+			Addr: ":" + util.GetEnvDefault("PORT", "8080"),
+			Mongo: app.MongoOptions{
+				URL:      mongoUrl,
+				Database: util.GetEnvDefault("MONGODB_DATABASE", "airsync"),
+			},
+			BucketName: util.GetEnvDefault("BUCKET_NAME", "airsync"),
+			UploadsDir: util.GetEnvDefault("UPLOADS_DIR", "uploads"),
+			Redis: services.RedisOptions{
+				Addr:     util.GetEnvDefault("REDIS_ADDR", "localhost:6379"),
+				Password: util.GetEnvDefault("REDIS_PASSWORD", ""),
+			},
+			GooglePubSub: services.GooglePubSubOptions{
+				ProjectID:      gcp.EnvProjectID(),
+				TopicID:        gcp.EnvPubSubTopicID(),
+				SubscriptionID: gcp.EnvPubSubSubscriptionID(),
+			},
+			EventService: util.GetEnvDefault("EVENT_SERVICE", ""),
+			EnableCORS:   enableCORS,
+		}).Start(ctx)
+		if err != nil {
 			log.Fatal(err)
 		}
 	},

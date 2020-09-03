@@ -2,6 +2,6 @@ package app
 
 import "context"
 
-type Service interface {
+type Application interface {
 	Start(ctx context.Context) error
 }

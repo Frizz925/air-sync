@@ -1,5 +1,10 @@
 /.vscode
 /public
+/uploads
+
+credentials.json
+.env.development
+.env.production
 
 # Created by https://www.toptal.com/developers/gitignore/api/go
 # Edit at https://www.toptal.com/developers/gitignore?templates=go

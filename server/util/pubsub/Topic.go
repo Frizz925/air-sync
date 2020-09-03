@@ -3,79 +3,49 @@ package pubsub
 import "sync"
 
 type Topic struct {
-	sync.RWMutex
-	stream      *Stream
+	publisher   *Publisher
 	name        string
-	nextId      int
 	subscribers map[int]*Subscriber
+	mu          sync.RWMutex
 }
 
-var _ Publisher = (*Topic)(nil)
+func NewTopic(p *Publisher, name string) *Topic {
+	return &Topic{
+		publisher:   p,
+		name:        name,
+		subscribers: make(map[int]*Subscriber),
+	}
+}
 
 func (t *Topic) Subscribe() *Subscriber {
-	defer t.Unlock()
-	t.Lock()
-	t.nextId++
-	sub := &Subscriber{
-		id:        t.nextId,
-		publisher: t,
-		channel:   make(chan Item, 1),
-	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	sub := NewSubscriber(t, t.publisher.nextID())
 	t.subscribers[sub.id] = sub
+	go sub.start()
 	return sub
 }
 
-func (t *Topic) Unsubscribe(id int) {
-	defer t.Unlock()
-	t.Lock()
-	if sub, ok := t.subscribers[id]; ok {
-		delete(t.subscribers, id)
-		close(sub.channel)
-	}
-}
-
-func (t *Topic) Fire(event interface{}) {
-	t.FireItem(Item{
-		E: nil,
-		V: event,
-	})
-}
-
-func (t *Topic) FireError(err error) {
-	t.FireItem(Item{
-		E: err,
-		V: nil,
-	})
-}
-
-func (t *Topic) FireItem(item Item) {
-	defer t.RUnlock()
-	t.RLock()
+func (t *Topic) Publish(v interface{}) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	for _, sub := range t.subscribers {
-		select {
-		case sub.channel <- item:
-		default:
-		}
+		sub.fire(v)
 	}
 }
 
-func (t *Topic) ForEach(handler SubscribeFunc) error {
-	sub := t.Subscribe()
-	defer sub.Unsubscribe()
-	for item := range sub.Observe() {
-		if item.E == ErrStreamClosed {
-			break
-		}
-		if err := handler(item.V); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (t *Topic) Shutdown() {
-	t.FireError(ErrStreamClosed)
+func (t *Topic) Close() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	for _, sub := range t.subscribers {
-		t.Unsubscribe(sub.id)
+		sub.cleanup()
 	}
+	t.subscribers = make(map[int]*Subscriber)
+	t.publisher.removeTopic(t.name)
+}
+
+func (t *Topic) unsubscribe(id int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	delete(t.subscribers, id)
 }

@@ -8,24 +8,24 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type WebHandlerOptions struct {
+type WebOptions struct {
 	PublicPath   string
 	IndexFile    string
 	NotFoundFile string
 }
 
 type WebHandler struct {
-	WebHandlerOptions
+	WebOptions
 	FileServer http.Handler
 }
 
 var _ RouteHandler = (*WebHandler)(nil)
 
-func NewWebHandler(options WebHandlerOptions) *WebHandler {
-	fs := http.FileServer(http.Dir(options.PublicPath))
+func NewWebHandler(opts WebOptions) *WebHandler {
+	fs := http.FileServer(http.Dir(opts.PublicPath))
 	return &WebHandler{
-		WebHandlerOptions: options,
-		FileServer:        fs,
+		WebOptions: opts,
+		FileServer: fs,
 	}
 }
 

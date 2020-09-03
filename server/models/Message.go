@@ -1,25 +1,21 @@
 package models
 
-import (
-	"time"
-
-	uuid "github.com/satori/go.uuid"
-)
+type BaseMessage struct {
+	Sensitive    bool   `json:"sensitive"`
+	Body         string `json:"body,omitempty"`
+	AttachmentID string `json:"attachment_id,omitempty"`
+}
 
 type Message struct {
-	Id        string `json:"id"`
-	Type      string `json:"type"`
-	Mime      string `json:"mime"`
-	Content   string `json:"content"`
-	CreatedAt int64  `json:"created_at"`
+	BaseMessage
+	ID             string `json:"id"`
+	AttachmentName string `json:"attachment_name,omitempty"`
+	AttachmentType string `json:"attachment_type,omitempty"`
+	CreatedAt      int64  `json:"created_at"`
 }
 
-func NewMessage() Message {
-	return Message{
-		Id:        uuid.NewV4().String(),
-		Type:      "text",
-		Mime:      "text/plain",
-		Content:   "",
-		CreatedAt: time.Now().Unix(),
-	}
+type InsertMessage struct {
+	BaseMessage
 }
+
+var EmptyMessage = Message{}
