@@ -64,7 +64,7 @@ func (h *StreamingHandler) SendSessionEvent(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	sub := h.pub.Topic(events.EventSessionId(id)).Subscribe()
+	sub := h.pub.Topic(events.EventSessionID(id)).Subscribe()
 	defer sub.Unsubscribe()
 
 	if err := h.HandleStream(rwf, req, sub); err != nil {

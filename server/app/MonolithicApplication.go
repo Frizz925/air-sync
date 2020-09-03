@@ -9,40 +9,39 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type MongoOptions struct {
+	URL      *url.URL
+	Database string
+}
+
 type MonolithicApplication struct {
-	Addr          string
-	MongoUrl      *url.URL
-	MongoDatabase string
-	RedisAddr     string
-	RedisPassword string
-	EnableCORS    bool
+	Addr         string
+	Mongo        MongoOptions
+	Redis        services.RedisOptions
+	GooglePubSub services.GooglePubSubOptions
+	EventService string
+	EnableCORS   bool
 }
 
 var _ Application = (*MonolithicApplication)(nil)
 
 func (s *MonolithicApplication) Start(ctx context.Context) error {
 	repos := services.NewMongoRepositoryService(ctx, services.MongoRepositoryOptions{
-		URL:      s.MongoUrl,
-		Database: s.MongoDatabase,
+		URL:      s.Mongo.URL,
+		Database: s.Mongo.Database,
 	})
 	if err := repos.Initialize(); err != nil {
 		return err
 	}
 	defer repos.Deinitialize()
 
-	eventBroker := services.NewEventBrokerService(ctx)
+	eventBroker := services.NewEventBrokerService(ctx, services.EventBrokerOptions{
+		Service:      s.EventService,
+		Redis:        s.Redis,
+		GooglePubSub: s.GooglePubSub,
+	})
 	eventBroker.Initialize()
 	defer eventBroker.Deinitialize()
-
-	redisBroker := services.NewRedisBrokerService(ctx, services.RedisBrokerOptions{
-		Publisher: eventBroker.Publisher(),
-		Addr:      s.RedisAddr,
-		Password:  s.RedisPassword,
-	})
-	if err := redisBroker.Initialize(); err != nil {
-		return err
-	}
-	defer redisBroker.Deinitialize()
 
 	router := mux.NewRouter()
 	handlers.NewApiHandler(

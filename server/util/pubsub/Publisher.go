@@ -9,13 +9,13 @@ type Message struct {
 
 type Publisher struct {
 	topics  map[string]*Topic
-	_nextId int
+	_nextID int
 	mu      sync.RWMutex
 }
 
 func NewPublisher() *Publisher {
 	return &Publisher{
-		_nextId: 0,
+		_nextID: 0,
 		topics:  make(map[string]*Topic),
 	}
 }
@@ -31,11 +31,11 @@ func (p *Publisher) Topic(name string) *Topic {
 	return topic
 }
 
-func (p *Publisher) nextId() int {
+func (p *Publisher) nextID() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p._nextId++
-	return p._nextId
+	p._nextID++
+	return p._nextID
 }
 
 func (p *Publisher) removeTopic(name string) {

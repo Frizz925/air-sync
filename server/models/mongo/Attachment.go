@@ -2,13 +2,12 @@ package mongo
 
 import (
 	"air-sync/models"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
 
 type Attachment struct {
-	Id        string `bson:"_id"`
+	ID        string `bson:"_id"`
 	Filename  string `bson:"filename"`
 	Type      string `bson:"type"`
 	Mime      string `bson:"mime"`
@@ -17,8 +16,8 @@ type Attachment struct {
 
 func NewAttachment() Attachment {
 	return Attachment{
-		Id:        uuid.NewV4().String(),
-		CreatedAt: time.Now().Unix(),
+		ID:        uuid.NewV4().String(),
+		CreatedAt: models.Timestamp(),
 	}
 }
 
@@ -37,7 +36,7 @@ func ToAttachmentModel(attachment Attachment) models.Attachment {
 			Filename: attachment.Filename,
 			Mime:     attachment.Mime,
 		},
-		Id:        attachment.Id,
+		ID:        attachment.ID,
 		CreatedAt: attachment.CreatedAt,
 	}
 }

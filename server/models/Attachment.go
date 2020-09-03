@@ -8,8 +8,8 @@ type BaseAttachment struct {
 
 type Attachment struct {
 	BaseAttachment
-	Id        string `json:"id"`
-	CreatedAt int64  `gorm:"autoCreateTime"`
+	ID        string `json:"id"`
+	CreatedAt int64  `json:"created_at"`
 }
 
 type CreateAttachment struct {
@@ -17,3 +17,13 @@ type CreateAttachment struct {
 }
 
 var EmptyAttachment = Attachment{}
+
+func NewCreateAttachment(filename string, atype string, mime string) CreateAttachment {
+	return CreateAttachment{
+		BaseAttachment: BaseAttachment{
+			Filename: filename,
+			Type:     atype,
+			Mime:     mime,
+		},
+	}
+}

@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"air-sync/app"
+	"air-sync/services"
 	"air-sync/util"
+	"air-sync/util/gcp"
 	"context"
 	"os"
 	"os/signal"
@@ -33,12 +35,6 @@ var rootCmd = &cobra.Command{
 			cancel()
 		}()
 
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-			log.Infof("Defaulting to port %s", port)
-		}
-
 		mongoUrl, err := util.EnvMongoUrl()
 		if err != nil {
 			log.Fatal(err)
@@ -46,12 +42,22 @@ var rootCmd = &cobra.Command{
 		}
 
 		err = (&app.MonolithicApplication{
-			Addr:          ":" + port,
-			MongoUrl:      mongoUrl,
-			MongoDatabase: util.EnvMongoDatabase(),
-			RedisAddr:     util.EnvRedisAddr(),
-			RedisPassword: util.EnvRedisPassword(),
-			EnableCORS:    enableCORS,
+			Addr: ":" + util.EnvPort(),
+			Mongo: app.MongoOptions{
+				URL:      mongoUrl,
+				Database: util.EnvMongoDatabase(),
+			},
+			Redis: services.RedisOptions{
+				Addr:     util.EnvRedisAddr(),
+				Password: util.EnvRedisPassword(),
+			},
+			GooglePubSub: services.GooglePubSubOptions{
+				ProjectID:      gcp.EnvProjectID(),
+				TopicID:        gcp.EnvPubSubTopicID(),
+				SubscriptionID: gcp.EnvPubSubSubscriptionID(),
+			},
+			EventService: util.EnvEventService(),
+			EnableCORS:   enableCORS,
 		}).Start(ctx)
 		if err != nil {
 			log.Fatal(err)

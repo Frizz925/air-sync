@@ -2,13 +2,12 @@ package orm
 
 import (
 	"air-sync/models"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
 
 type Attachment struct {
-	Id        string `gorm:"primaryKey"`
+	ID        string `gorm:"primaryKey"`
 	Filename  string `gorm:"not null"`
 	Type      string `gorm:"not null"`
 	Mime      string `gorm:"not null"`
@@ -17,8 +16,8 @@ type Attachment struct {
 
 func NewAttachment() Attachment {
 	return Attachment{
-		Id:        uuid.NewV4().String(),
-		CreatedAt: time.Now().Unix(),
+		ID:        uuid.NewV4().String(),
+		CreatedAt: models.Timestamp(),
 	}
 }
 
@@ -37,7 +36,7 @@ func ToAttachmentModel(attachment Attachment) models.Attachment {
 			Filename: attachment.Filename,
 			Mime:     attachment.Mime,
 		},
-		Id:        attachment.Id,
+		ID:        attachment.ID,
 		CreatedAt: attachment.CreatedAt,
 	}
 }

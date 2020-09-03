@@ -2,24 +2,23 @@ package mongo
 
 import (
 	"air-sync/models"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
 
 type Message struct {
-	Id           string `bson:"_id"`
+	ID           string `bson:"_id"`
 	Sensitive    bool   `bson:"sensitive"`
 	Body         string `bson:"body"`
-	AttachmentId string `bson:"attachment_id"`
+	AttachmentID string `bson:"attachment_id"`
 	CreatedAt    int64  `bson:"created_at"`
 }
 
 func NewMessage() Message {
 	return Message{
-		Id:        uuid.NewV4().String(),
+		ID:        uuid.NewV4().String(),
 		Sensitive: false,
-		CreatedAt: time.Now().Unix(),
+		CreatedAt: models.Timestamp(),
 	}
 }
 
@@ -27,7 +26,7 @@ func FromInsertMessageModel(insert models.InsertMessage) Message {
 	message := NewMessage()
 	message.Sensitive = insert.Sensitive
 	message.Body = insert.Body
-	message.AttachmentId = insert.AttachmentId
+	message.AttachmentID = insert.AttachmentID
 	return message
 }
 
@@ -36,9 +35,9 @@ func ToMessageModel(message Message) models.Message {
 		BaseMessage: models.BaseMessage{
 			Sensitive:    message.Sensitive,
 			Body:         message.Body,
-			AttachmentId: message.AttachmentId,
+			AttachmentID: message.AttachmentID,
 		},
-		Id:        message.Id,
+		ID:        message.ID,
 		CreatedAt: message.CreatedAt,
 	}
 }

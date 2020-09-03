@@ -20,7 +20,7 @@ func NewTopic(p *Publisher, name string) *Topic {
 func (t *Topic) Subscribe() *Subscriber {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	sub := NewSubscriber(t, t.publisher.nextId())
+	sub := NewSubscriber(t, t.publisher.nextID())
 	t.subscribers[sub.id] = sub
 	go sub.start()
 	return sub

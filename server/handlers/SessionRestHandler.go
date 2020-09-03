@@ -31,7 +31,7 @@ func (h *SessionRestHandler) RegisterRoutes(r *mux.Router) {
 	s.HandleFunc("/{id}", h.WrapSessionHandlerFunc(h.GetSession)).Methods("GET")
 	s.HandleFunc("/{id}", util.WrapRestHandlerFunc(h.DeleteSession)).Methods("DELETE")
 	s.HandleFunc("/{id}", util.WrapRestHandlerFunc(h.InsertMessage)).Methods("PUT")
-	s.HandleFunc("/{id}/{messageId}", util.WrapRestHandlerFunc(h.DeleteMessage)).Methods("DELETE")
+	s.HandleFunc("/{id}/{messageID}", util.WrapRestHandlerFunc(h.DeleteMessage)).Methods("DELETE")
 }
 
 func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestResponse, error) {
@@ -40,12 +40,12 @@ func (h *SessionRestHandler) CreateSession(req *http.Request) (*util.RestRespons
 		return h.HandleSessionRestError(err)
 	}
 	h.topic.Publish(events.CreateSessionEvent(
-		session.Id, events.EventSessionCreated, events.SessionCreate(session), nil,
+		session.ID, events.EventSessionCreated, events.SessionCreate(session), nil,
 	))
-	util.RequestLogger(req).WithField("session_id", session.Id).Info("Created new session")
+	util.RequestLogger(req).WithField("session_id", session.ID).Info("Created new session")
 	return &util.RestResponse{
 		Message: "Session created",
-		Data:    session.Id,
+		Data:    session.ID,
 	}, nil
 }
 
@@ -74,7 +74,7 @@ func (h *SessionRestHandler) InsertMessage(req *http.Request) (*util.RestRespons
 	if err := dec.Decode(&insert); err != nil {
 		return nil, err
 	}
-	if insert.Body == "" && insert.AttachmentId == "" {
+	if insert.Body == "" && insert.AttachmentID == "" {
 		return &util.RestResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    "Malformed request",
@@ -87,36 +87,36 @@ func (h *SessionRestHandler) InsertMessage(req *http.Request) (*util.RestRespons
 	}
 	h.topic.Publish(events.CreateSessionEvent(
 		id, events.EventMessageInserted, events.MessageInsert{
-			SessionId: id,
+			SessionID: id,
 			Message:   message,
 		}, nil,
 	))
 	util.RequestLogger(req).WithFields(log.Fields{
 		"session_id": id,
-		"message_id": message.Id,
+		"message_id": message.ID,
 	}).Info("Inserted message")
 	return &util.RestResponse{
 		Message: "Message inserted",
-		Data:    message.Id,
+		Data:    message.ID,
 	}, nil
 }
 
 func (h *SessionRestHandler) DeleteMessage(req *http.Request) (*util.RestResponse, error) {
 	vars := mux.Vars(req)
-	sessionId := vars["id"]
-	messageId := vars["messageId"]
-	if err := h.repo.DeleteMessage(sessionId, messageId); err != nil {
+	sessionID := vars["id"]
+	messageID := vars["messageID"]
+	if err := h.repo.DeleteMessage(sessionID, messageID); err != nil {
 		return h.HandleSessionRestError(err)
 	}
 	h.pub.Topic(events.EventSession).Publish(events.CreateSessionEvent(
-		sessionId, events.EventMessageDeleted, events.MessageDelete{
-			SessionId: sessionId,
-			MessageId: messageId,
+		sessionID, events.EventMessageDeleted, events.MessageDelete{
+			SessionID: sessionID,
+			MessageID: messageID,
 		}, nil,
 	))
 	util.RequestLogger(req).WithFields(log.Fields{
-		"session_id": sessionId,
-		"message_id": messageId,
+		"session_id": sessionID,
+		"message_id": messageID,
 	}).Info("Deleted message")
 	return &util.RestResponse{
 		Message: "Message deleted",

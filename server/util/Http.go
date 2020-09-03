@@ -4,6 +4,7 @@ import (
 	"air-sync/util/logging"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -16,7 +17,9 @@ const requestLoggerKey contextKey = iota
 type Response struct {
 	StatusCode  int
 	ContentType string
+	Header      http.Header
 	Body        []byte
+	BodyStream  io.ReadCloser
 }
 
 type JsonResponse struct {
@@ -168,14 +171,25 @@ func CreateRestResponse(data interface{}) *RestResponse {
 }
 
 func WriteResponse(w http.ResponseWriter, req *http.Request, res *Response) {
-	if res.ContentType != "" {
+	if res.Header != nil {
+		for key, value := range res.Header {
+			w.Header()[key] = value
+		}
+	} else if res.ContentType != "" {
 		w.Header().Set("Content-Type", res.ContentType)
 	}
 	w.WriteHeader(res.StatusCode)
-	if res.Body == nil || res.StatusCode == http.StatusNoContent {
+	if res.StatusCode == http.StatusNoContent {
 		return
 	}
-	if _, err := w.Write(res.Body); err != nil {
-		RequestLogger(req).Error(err)
+	if res.Body != nil {
+		if _, err := w.Write(res.Body); err != nil {
+			RequestLogger(req).Error(err)
+		}
+	} else if res.BodyStream != nil {
+		defer res.BodyStream.Close()
+		if _, err := io.Copy(w, res.BodyStream); err != nil {
+			RequestLogger(req).Error(err)
+		}
 	}
 }

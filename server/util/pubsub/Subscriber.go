@@ -34,26 +34,24 @@ func NewSubscriber(t *Topic, id int) *Subscriber {
 	}
 }
 
-func (s *Subscriber) ForEach(ctx context.Context, handler SubscriberFunc) error {
+func (s *Subscriber) ForEach(ctx context.Context, handler SubscriberFunc, errorHandler ErrorHandlerFunc) {
 	ch := s.Channel()
 	for {
 		select {
 		case v := <-ch:
-			if err := handler(v); err != nil {
-				return err
-			}
+			go func() {
+				if err := handler(v); err != nil {
+					errorHandler(err)
+				}
+			}()
 		case <-ctx.Done():
-			return nil
+			return
 		}
 	}
 }
 
 func (s *Subscriber) ForEachAsync(ctx context.Context, handler SubscriberFunc, errorHandler ErrorHandlerFunc) {
-	go func() {
-		if err := s.ForEach(ctx, handler); err != nil {
-			errorHandler(err)
-		}
-	}()
+	go s.ForEach(ctx, handler, errorHandler)
 }
 
 func (s *Subscriber) Channel() <-chan interface{} {

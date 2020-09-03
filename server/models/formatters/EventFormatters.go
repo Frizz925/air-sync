@@ -7,7 +7,7 @@ import (
 
 func FromSessionEvent(e events.SessionEvent) models.Event {
 	evt := models.Event{
-		Id:        e.Id,
+		ID:        e.ID,
 		Event:     e.Event,
 		Data:      e.Value,
 		Timestamp: e.Timestamp,

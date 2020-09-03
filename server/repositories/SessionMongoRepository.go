@@ -63,10 +63,10 @@ func (r *SessionMongoRepository) InsertMessage(id string, arg models.InsertMessa
 	return mongoModels.ToMessageModel(message), nil
 }
 
-func (r *SessionMongoRepository) DeleteMessage(id string, messageId string) error {
+func (r *SessionMongoRepository) DeleteMessage(id string, messageID string) error {
 	cur, err := r.sessions.Find(
 		r.context,
-		bson.M{"_id": id, "messages._id": messageId},
+		bson.M{"_id": id, "messages._id": messageID},
 	)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (r *SessionMongoRepository) DeleteMessage(id string, messageId string) erro
 	_, err = r.sessions.UpdateOne(
 		r.context,
 		bson.M{"_id": id},
-		bson.M{"$pull": bson.M{"messages": bson.M{"_id": messageId}}},
+		bson.M{"$pull": bson.M{"messages": bson.M{"_id": messageID}}},
 	)
 	return err
 }

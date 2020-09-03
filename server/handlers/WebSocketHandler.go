@@ -77,7 +77,7 @@ func (h *WebSocketHandler) SetupWS(w http.ResponseWriter, req *http.Request) {
 	}
 	defer conn.Close()
 
-	sub := h.pub.Topic(events.EventSessionId(id)).Subscribe()
+	sub := h.pub.Topic(events.EventSessionID(id)).Subscribe()
 	defer sub.Unsubscribe()
 
 	ws := &WebSocketSession{
@@ -103,8 +103,8 @@ func (ws *WebSocketSession) Setup() {
 }
 
 func (ws *WebSocketSession) Start() error {
-	ws.logger.WithField("session_id", ws.Id).Info("New WebSocket client connected")
-	defer ws.logger.WithField("session_id", ws.Id).Info("WebSocket client disconnected")
+	ws.logger.WithField("session_id", ws.ID).Info("New WebSocket client connected")
+	defer ws.logger.WithField("session_id", ws.ID).Info("WebSocket client disconnected")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {

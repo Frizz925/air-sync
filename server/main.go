@@ -13,6 +13,7 @@ func init() {
 }
 
 func main() {
+	util.SetupCredentialsEnv()
 	if err := util.LoadDotEnv(); err != nil {
 		log.Fatal(err)
 	}

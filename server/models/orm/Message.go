@@ -2,34 +2,33 @@ package orm
 
 import (
 	"air-sync/models"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
 
 type Message struct {
-	Id           string `gorm:"primaryKey"`
-	SessionId    string `gorm:"foreignKey,not null"`
+	ID           string `gorm:"primaryKey"`
+	SessionID    string `gorm:"foreignKey,not null"`
 	Sensitive    bool   `gorm:"not null"`
 	Body         string
-	AttachmentId string
+	AttachmentID string
 	CreatedAt    int64 `gorm:"autoCreateTime"`
 }
 
-func NewMessage(sessionId string) Message {
+func NewMessage(sessionID string) Message {
 	return Message{
-		Id:        uuid.NewV4().String(),
-		SessionId: sessionId,
+		ID:        uuid.NewV4().String(),
+		SessionID: sessionID,
 		Sensitive: false,
-		CreatedAt: time.Now().Unix(),
+		CreatedAt: models.Timestamp(),
 	}
 }
 
-func FromInsertMessageModel(sessionId string, insert models.InsertMessage) Message {
-	message := NewMessage(sessionId)
+func FromInsertMessageModel(sessionID string, insert models.InsertMessage) Message {
+	message := NewMessage(sessionID)
 	message.Sensitive = insert.Sensitive
 	message.Body = insert.Body
-	message.AttachmentId = insert.AttachmentId
+	message.AttachmentID = insert.AttachmentID
 	return message
 }
 
@@ -38,9 +37,9 @@ func ToMessageModel(message Message) models.Message {
 		BaseMessage: models.BaseMessage{
 			Sensitive:    message.Sensitive,
 			Body:         message.Body,
-			AttachmentId: message.AttachmentId,
+			AttachmentID: message.AttachmentID,
 		},
-		Id:        message.Id,
+		ID:        message.ID,
 		CreatedAt: message.CreatedAt,
 	}
 }

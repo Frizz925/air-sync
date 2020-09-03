@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/joho/godotenv"
 )
@@ -40,14 +44,31 @@ func EnvRedisPassword() string {
 	return os.Getenv("REDIS_PASSWORD")
 }
 
+func EnvEventService() string {
+	return GetEnvDefault("EVENT_SERVICE", "Local")
+}
+
+func SetupCredentialsEnv() error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", path.Join(dir, "credentials.json"))
+	return nil
+}
+
 func LoadDotEnv() error {
 	mode := GetEnvDefault("APP_MODE", "development")
 	filename := fmt.Sprintf(".env.%s", mode)
+	var filenames []string
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
-		return godotenv.Load()
-	} else if err != nil {
-		return err
+		filenames = []string{".env"}
+	} else if err == nil {
+		filenames = []string{filename, ".env"}
+	} else {
+		return nil
 	}
-	return godotenv.Load(filename, ".env")
+	log.Infof("Loading environment files: %s", strings.Join(filenames, ", "))
+	return godotenv.Load(filenames...)
 }

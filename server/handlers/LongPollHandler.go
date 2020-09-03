@@ -41,7 +41,7 @@ func (h *LongPollHandler) PollSession(req *http.Request) (*util.RestResponse, er
 	defer logger.Info("Long-polling session ended")
 
 	ctx := req.Context()
-	sub := h.pub.Topic(events.EventSessionId(id)).Subscribe()
+	sub := h.pub.Topic(events.EventSessionID(id)).Subscribe()
 	defer sub.Unsubscribe()
 	ch := sub.Channel()
 

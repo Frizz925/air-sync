@@ -1,14 +1,15 @@
 package models
 
 type BaseMessage struct {
-	Sensitive    bool   `json:"sensitive"`
-	Body         string `json:"body,omitempty"`
-	AttachmentId string `json:"attachment_id,omitempty"`
+	Sensitive      bool   `json:"sensitive"`
+	Body           string `json:"body,omitempty"`
+	AttachmentID   string `json:"attachment_id,omitempty"`
+	AttachmentName string `json:"attachment_name,omitempty"`
 }
 
 type Message struct {
 	BaseMessage
-	Id        string `json:"id"`
+	ID        string `json:"id"`
 	CreatedAt int64  `json:"created_at"`
 }
 

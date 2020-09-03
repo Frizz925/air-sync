@@ -8,25 +8,81 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type EventBrokerService struct {
-	context context.Context
-	pub     *pubsub.Publisher
+type RedisOptions struct {
+	Addr     string
+	Password string
 }
 
-func NewEventBrokerService(ctx context.Context) *EventBrokerService {
+type GooglePubSubOptions struct {
+	ProjectID      string
+	TopicID        string
+	SubscriptionID string
+}
+
+type EventBrokerOptions struct {
+	Service      string
+	Redis        RedisOptions
+	GooglePubSub GooglePubSubOptions
+}
+
+type EventBrokerService struct {
+	EventBrokerOptions
+	context     context.Context
+	pub         *pubsub.Publisher
+	broker      Service
+	initialized bool
+}
+
+var _ Service = (*EventBrokerService)(nil)
+
+func NewEventBrokerService(ctx context.Context, opts EventBrokerOptions) *EventBrokerService {
 	return &EventBrokerService{
-		context: ctx,
-		pub:     pubsub.NewPublisher(),
+		EventBrokerOptions: opts,
+		context:            ctx,
+		pub:                pubsub.NewPublisher(),
+		initialized:        false,
 	}
 }
 
-func (s *EventBrokerService) Initialize() {
+func (s *EventBrokerService) Initialize() error {
+	if s.initialized {
+		return ErrAlreadyInitialized
+	}
 	s.pub.Topic(events.EventSession).Subscribe().
 		ForEachAsync(s.context, s.handleSessionEvent, s.handleError)
+	switch s.Service {
+	case "Redis":
+		s.broker = NewRedisBrokerService(s.context, RedisBrokerOptions{
+			Publisher: s.pub,
+			Addr:      s.Redis.Addr,
+			Password:  s.Redis.Password,
+		})
+	case "GooglePubSub":
+		s.broker = NewGooglePubSubBrokerService(s.context, GooglePubSubBrokerOptions{
+			Publisher:      s.pub,
+			ProjectID:      s.GooglePubSub.ProjectID,
+			TopicID:        s.GooglePubSub.TopicID,
+			SubscriptionID: s.GooglePubSub.SubscriptionID,
+		})
+	}
+	if s.broker != nil {
+		if err := s.broker.Initialize(); err != nil {
+			return err
+		}
+	}
+	s.initialized = true
+	return nil
 }
 
 func (s *EventBrokerService) Deinitialize() {
+	if !s.initialized {
+		return
+	}
 	s.pub.Topic(events.EventSession).Close()
+	if s.broker != nil {
+		s.broker.Deinitialize()
+	}
+	s.initialized = false
 }
 
 func (s *EventBrokerService) Publisher() *pubsub.Publisher {
@@ -43,12 +99,12 @@ func (s *EventBrokerService) handleSessionEvent(v interface{}) error {
 	}
 
 	s.pub.Topic(event.Event).Publish(event.Value)
-	s.pub.Topic(events.EventSessionId(event.SessionId)).Publish(event)
+	s.pub.Topic(events.EventSessionID(event.SessionID)).Publish(event)
 
 	// post-publish
 	switch event.Event {
 	case events.EventSessionDeleted:
-		s.pub.Topic(events.EventSessionId(event.SessionId)).Close()
+		s.pub.Topic(events.EventSessionID(event.SessionID)).Close()
 	}
 
 	return nil
