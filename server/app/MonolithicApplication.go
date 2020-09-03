@@ -50,6 +50,9 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 		return err
 	}
 	defer storageService.Deinitialize()
+	// HACK: Not calling initialize for our cache storage
+	// because the underlying storages' lifecycle have
+	// already been managed by the storage service itself
 	storage := storages.NewCacheStorage(
 		storageService.FileStorage(),
 		storageService.CloudStorage(),

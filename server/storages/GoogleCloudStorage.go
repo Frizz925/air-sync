@@ -36,6 +36,7 @@ func (s *GoogleCloudStorage) Initialize() error {
 }
 
 func (s *GoogleCloudStorage) Deinitialize() {
+	// Do nothing
 }
 
 func (s *GoogleCloudStorage) Exists(name string) (bool, error) {
