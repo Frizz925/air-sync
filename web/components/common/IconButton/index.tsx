@@ -1,6 +1,6 @@
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import classNames from 'classnames';
+import clsx from 'clsx';
 import React from 'react';
 import styles from './styles.module.css';
 
@@ -17,7 +17,7 @@ const IconButton: React.FC<IconButtonProps> = ({
   icon,
   onClick,
 }) => {
-  const classes = classNames(styles.container, styles[color]);
+  const classes = clsx(styles.container, styles[color]);
   const style = size
     ? ({ height: size, width: size } as React.CSSProperties)
     : null;

@@ -1,5 +1,5 @@
 import ConnectionState from '@/components/models/ConnectionState';
-import classNames from 'classnames';
+import clsx from 'clsx';
 import React from 'react';
 
 export interface SessionIndicatorProps {
@@ -11,7 +11,7 @@ const SessionIndicator: React.FC<SessionIndicatorProps> = ({
   sessionId,
   connectionState,
 }) => {
-  const indicatorClasses = classNames('p-1 rounded-full', {
+  const indicatorClasses = clsx('p-1 rounded-full', {
     'bg-red-700': connectionState === ConnectionState.DISCONNECTED,
     'bg-yellow-300': connectionState === ConnectionState.CONNECTING,
     'bg-green-600': connectionState === ConnectionState.CONNECTED,

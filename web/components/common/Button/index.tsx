@@ -1,4 +1,4 @@
-import classNames from 'classnames';
+import clsx from 'clsx';
 import React from 'react';
 import styles from './styles.module.css';
 
@@ -16,7 +16,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   onClick,
 }) => {
-  const classes = classNames(styles.button, styles[color], className);
+  const classes = clsx(styles.button, styles[color], className);
   return (
     <button className={classes} onClick={onClick} disabled={disabled}>
       {children}

@@ -1,4 +1,4 @@
-import classNames from 'classnames';
+import clsx from 'clsx';
 import React from 'react';
 import styles from './styles.module.css';
 
@@ -8,12 +8,12 @@ export interface DialogProps {
 }
 
 const Dialog: React.FC<DialogProps> = ({ children, shown, onClose }) => {
-  const overlayClasses = classNames(styles.overlay, styles.transition, {
+  const overlayClasses = clsx(styles.overlay, styles.transition, {
     [styles.shown]: shown,
     [styles.hidden]: !shown,
   });
 
-  const containerClasses = classNames(styles.container, styles.transition, {
+  const containerClasses = clsx(styles.container, styles.transition, {
     [styles.shown]: shown,
     [styles.hidden]: !shown,
   });
