@@ -70,6 +70,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
     setProcessing(true);
     try {
       const message = DefaultMessage();
+      message.sensitive = sensitive;
       message.body = textMessage;
       if (attachmentRef.current) {
         const attachment = await handleFileUpload(attachmentRef.current);
