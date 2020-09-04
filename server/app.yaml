@@ -1,3 +1,8 @@
 runtime: go114
 env_variables:
   APP_MODE: production
+automatic_scaling:
+  max_instances: 2
+  target_cpu_utilization: 0.95
+  target_throughput_utilization: 0.95
+  max_concurrent_requests: 80
