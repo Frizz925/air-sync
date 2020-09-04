@@ -4,6 +4,7 @@ import (
 	"air-sync/models"
 	"air-sync/models/orm"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -58,6 +59,10 @@ func (r *SessionSqlRepository) DeleteMessage(id string, messageID string) error 
 func (r *SessionSqlRepository) Delete(id string) error {
 	err := r.db.Delete(orm.Session{}, id).Error
 	return r.sessionCrudError(err)
+}
+
+func (r *SessionSqlRepository) DeleteBefore(t time.Time) (int, error) {
+	return 0, ErrNotImplemented
 }
 
 func (r *SessionSqlRepository) sessionCrudError(err error) error {

@@ -10,5 +10,7 @@ var ErrAttachmentNotFound = errors.New("Attachment not found")
 type AttachmentRepository interface {
 	Create(arg models.CreateAttachment) (models.Attachment, error)
 	Find(id string) (models.Attachment, error)
+	FindOrphans() ([]models.Attachment, error)
 	Delete(id string) error
+	DeleteMany(ids []string) (int, error)
 }

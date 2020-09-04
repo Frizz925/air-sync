@@ -1,6 +1,6 @@
 package services
 
-type Service interface {
+type Initializer interface {
 	Initialize() error
 	Deinitialize()
 }

@@ -59,8 +59,9 @@ var rootCmd = &cobra.Command{
 				TopicID:        gcp.EnvPubSubTopicID(),
 				SubscriptionID: gcp.EnvPubSubSubscriptionID(),
 			},
-			EventService: util.GetEnvDefault("EVENT_SERVICE", ""),
-			EnableCORS:   enableCORS,
+			EventService:    util.GetEnvDefault("EVENT_SERVICE", ""),
+			CronEnvironment: util.GetEnvDefault("CRON_ENVIRONMENT", ""),
+			EnableCORS:      enableCORS,
 		}).Start(ctx)
 		if err != nil {
 			log.Fatal(err)

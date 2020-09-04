@@ -12,6 +12,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const (
+	CloudEnvLocal       = "local"
+	CloudEnvAWS         = "aws"
+	CloudEnvGoogleCloud = "google_cloud"
+)
+
 func GetEnvDefault(name string, def string) string {
 	value := os.Getenv(name)
 	if value != "" {

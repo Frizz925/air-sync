@@ -35,7 +35,7 @@ type RedisBrokerService struct {
 	initialized bool
 }
 
-var _ Service = (*RedisBrokerService)(nil)
+var _ Initializer = (*RedisBrokerService)(nil)
 
 func NewRedisBrokerService(ctx context.Context, opts RedisBrokerOptions) *RedisBrokerService {
 	return &RedisBrokerService{

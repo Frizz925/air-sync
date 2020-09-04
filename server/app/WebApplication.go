@@ -13,15 +13,18 @@ import (
 )
 
 type WebApplication struct {
-	Addr       string
-	Router     *mux.Router
-	EnableCORS bool
+	Addr             string
+	Router           *mux.Router
+	EnableCORS       bool
+	CloudEnvironment string
 }
 
 var _ Application = (*WebApplication)(nil)
 
 func (s *WebApplication) Start(ctx context.Context) error {
-	s.Router.HandleFunc("/_ah/warmup", util.WrapHandlerFunc(s.handleWarmup))
+	if s.CloudEnvironment == string(util.CloudEnvGoogleCloud) {
+		s.Router.HandleFunc("/_ah/warmup", util.WrapHandlerFunc(s.handleWarmup))
+	}
 
 	err := s.Router.Walk(func(r *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		t, err := r.GetPathTemplate()

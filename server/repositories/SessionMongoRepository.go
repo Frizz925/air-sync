@@ -4,29 +4,60 @@ import (
 	"air-sync/models"
 	mongoModels "air-sync/models/mongo"
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var MongoSessionCollection = "sessions"
+const (
+	MongoSessionCollection = "sessions"
+	MongoMessageCollection = "messages"
+)
 
 type SessionMongoRepository struct {
 	*MongoRepository
 	context     context.Context
 	sessions    *mongo.Collection
+	messages    *mongo.Collection
 	attachments *mongo.Collection
 }
 
 var _ SessionRepository = (*SessionMongoRepository)(nil)
+var _ RepositoryMigration = (*SessionMongoRepository)(nil)
 
 func NewSessionMongoRepository(ctx context.Context, db *mongo.Database) *SessionMongoRepository {
 	return &SessionMongoRepository{
 		MongoRepository: NewMongoRepository(db),
 		context:         ctx,
 		sessions:        db.Collection(MongoSessionCollection),
+		messages:        db.Collection(MongoMessageCollection),
 		attachments:     db.Collection(MongoAttachmentCollection),
 	}
+}
+
+func (r *SessionMongoRepository) Migrate() error {
+	{
+		_, err := r.sessions.Indexes().CreateMany(r.context, []mongo.IndexModel{
+			{Keys: bson.M{"id": "hashed"}},
+			{Keys: bson.M{"created_at": 1}},
+		})
+		if err != nil {
+			return err
+		}
+	}
+	{
+		_, err := r.messages.Indexes().CreateMany(r.context, []mongo.IndexModel{
+			{Keys: bson.M{"id": "hashed"}},
+			{Keys: bson.M{"session_id": "hashed"}},
+			{Keys: bson.M{"attachment_id": "hashed"}},
+			{Keys: bson.M{"created_at": 1}},
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *SessionMongoRepository) Create() (models.Session, error) {
@@ -37,57 +68,69 @@ func (r *SessionMongoRepository) Create() (models.Session, error) {
 }
 
 func (r *SessionMongoRepository) Find(id string) (models.Session, error) {
-	cur, err := r.sessions.Find(r.context, bson.M{"_id": id})
-	if err != nil {
-		return models.EmptySession, err
-	}
-	defer cur.Close(r.context)
-	if !cur.Next(r.context) {
-		return models.EmptySession, ErrSessionNotFound
-	}
 	session := mongoModels.Session{}
-	if err := cur.Decode(&session); err != nil {
-		return models.EmptySession, err
-	}
-	messages := make([]models.Message, len(session.Messages))
-	if len(session.Messages) <= 0 {
-		return mongoModels.ToSessionModel(session, messages), nil
-	}
-	attachmentSet := make(map[string]bool)
-	for _, message := range session.Messages {
-		if message.AttachmentID != "" {
-			attachmentSet[message.AttachmentID] = true
+	{
+		cur, err := r.sessions.Find(r.context, bson.M{"id": id})
+		if err != nil {
+			return models.EmptySession, err
+		}
+		defer cur.Close(r.context)
+		if !cur.Next(r.context) {
+			return models.EmptySession, ErrSessionNotFound
+		}
+		if err := cur.Decode(&session); err != nil {
+			return models.EmptySession, err
 		}
 	}
-	attachmentIds := make(bson.A, 0)
-	for attachmentId := range attachmentSet {
-		attachmentIds = append(attachmentIds, attachmentId)
+	messages := make([]mongoModels.Message, 0)
+	{
+		cur, err := r.messages.Find(r.context, bson.M{"session_id": id})
+		if err != nil {
+			return models.EmptySession, err
+		}
+		defer cur.Close(r.context)
+		if err := cur.All(r.context, &messages); err != nil {
+			return models.EmptySession, err
+		}
 	}
-	attachmentMap, err := r.FindAttachments(attachmentIds)
-	if err != nil {
-		return models.EmptySession, err
+	messageResults := make([]models.Message, len(messages))
+	{
+		attachmentSet := make(map[string]bool)
+		attachmentIds := make(bson.A, 0)
+		for _, message := range messages {
+			attachmentId := message.AttachmentID
+			if attachmentId == "" {
+				continue
+			}
+			attachmentSet[attachmentId] = true
+			if _, ok := attachmentSet[attachmentId]; !ok {
+				attachmentIds = append(attachmentIds, attachmentId)
+			}
+		}
+		attachmentMap, err := r.FindAttachments(attachmentIds)
+		if err != nil {
+			return models.EmptySession, err
+		}
+		for idx, message := range messages {
+			attachment := attachmentMap[message.AttachmentID]
+			messageResults[idx] = mongoModels.ToMessageModel(message, attachment)
+		}
 	}
-	for idx, message := range session.Messages {
-		attachment := attachmentMap[message.AttachmentID]
-		messages[idx] = mongoModels.ToMessageModel(message, attachment)
-	}
-	return mongoModels.ToSessionModel(session, messages), nil
+	return mongoModels.ToSessionModel(session, messageResults), nil
 }
 
 func (r *SessionMongoRepository) InsertMessage(id string, arg models.InsertMessage) (models.Message, error) {
-	message := mongoModels.FromInsertMessageModel(arg)
-	res, err := r.sessions.UpdateOne(
-		r.context,
-		bson.M{"_id": id},
-		bson.M{"$push": bson.M{"messages": bson.M{
-			"$each":     bson.A{message},
-			"$position": 0,
-		}}},
-	)
+	cur, err := r.sessions.Find(r.context, bson.M{"id": id})
 	if err != nil {
 		return models.EmptyMessage, err
-	} else if res.MatchedCount <= 0 {
+	}
+	defer cur.Close(r.context)
+	if !cur.TryNext(r.context) {
 		return models.EmptyMessage, ErrSessionNotFound
+	}
+	message := mongoModels.FromInsertMessageModel(id, arg)
+	if _, err := r.messages.InsertOne(r.context, message); err != nil {
+		return models.EmptyMessage, err
 	}
 	if message.AttachmentID == "" {
 		return mongoModels.ToMessageModel(message, mongoModels.EmptyAttachment), nil
@@ -97,23 +140,13 @@ func (r *SessionMongoRepository) InsertMessage(id string, arg models.InsertMessa
 }
 
 func (r *SessionMongoRepository) DeleteMessage(id string, messageID string) error {
-	cur, err := r.sessions.Find(
-		r.context,
-		bson.M{"_id": id, "messages._id": messageID},
-	)
+	res, err := r.messages.DeleteOne(r.context, bson.M{"id": messageID, "session_id": id})
 	if err != nil {
 		return err
-	}
-	defer cur.Close(r.context)
-	if !cur.Next(r.context) {
+	} else if res.DeletedCount <= 0 {
 		return ErrMessageNotFound
 	}
-	_, err = r.sessions.UpdateOne(
-		r.context,
-		bson.M{"_id": id},
-		bson.M{"$pull": bson.M{"messages": bson.M{"_id": messageID}}},
-	)
-	return err
+	return nil
 }
 
 func (r *SessionMongoRepository) FindOneAttachment(id string) (mongoModels.Attachment, error) {
@@ -123,7 +156,7 @@ func (r *SessionMongoRepository) FindOneAttachment(id string) (mongoModels.Attac
 
 func (r *SessionMongoRepository) FindAttachments(ids bson.A) (map[string]mongoModels.Attachment, error) {
 	resultMap := make(map[string]mongoModels.Attachment)
-	cur, err := r.attachments.Find(r.context, bson.M{"_id": bson.M{"$in": ids}})
+	cur, err := r.attachments.Find(r.context, bson.M{"id": bson.M{"$in": ids}})
 	if err != nil {
 		return resultMap, err
 	}
@@ -139,11 +172,27 @@ func (r *SessionMongoRepository) FindAttachments(ids bson.A) (map[string]mongoMo
 }
 
 func (r *SessionMongoRepository) Delete(id string) error {
-	res, err := r.sessions.DeleteOne(r.context, bson.M{"_id": id})
-	if err != nil {
-		return err
-	} else if res.DeletedCount <= 0 {
-		return ErrSessionNotFound
+	{
+		_, err := r.messages.DeleteMany(r.context, bson.M{"session_id": id})
+		if err != nil {
+			return err
+		}
+	}
+	{
+		res, err := r.sessions.DeleteOne(r.context, bson.M{"id": id})
+		if err != nil {
+			return err
+		} else if res.DeletedCount <= 0 {
+			return ErrSessionNotFound
+		}
 	}
 	return nil
+}
+
+func (r *SessionMongoRepository) DeleteBefore(t time.Time) (int, error) {
+	ts := t.UnixNano() / int64(time.Millisecond)
+	res, err := r.sessions.DeleteMany(r.context, bson.M{
+		"created_at": bson.M{"$lt": ts},
+	})
+	return int(res.DeletedCount), err
 }

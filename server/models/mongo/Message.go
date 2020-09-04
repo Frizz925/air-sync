@@ -7,23 +7,25 @@ import (
 )
 
 type Message struct {
-	ID           string `bson:"_id"`
+	ID           string `bson:"id"`
+	SessionID    string `bson:"session_id"`
 	Sensitive    bool   `bson:"sensitive"`
 	Body         string `bson:"body"`
 	AttachmentID string `bson:"attachment_id"`
 	CreatedAt    int64  `bson:"created_at"`
 }
 
-func NewMessage() Message {
+func NewMessage(sessionId string) Message {
 	return Message{
 		ID:        uuid.NewV4().String(),
+		SessionID: sessionId,
 		Sensitive: false,
 		CreatedAt: models.Timestamp(),
 	}
 }
 
-func FromInsertMessageModel(insert models.InsertMessage) Message {
-	message := NewMessage()
+func FromInsertMessageModel(sessionId string, insert models.InsertMessage) Message {
+	message := NewMessage(sessionId)
 	message.Sensitive = insert.Sensitive
 	message.Body = insert.Body
 	message.AttachmentID = insert.AttachmentID

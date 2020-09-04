@@ -7,7 +7,7 @@ import (
 )
 
 type Attachment struct {
-	ID        string `bson:"_id"`
+	ID        string `bson:"id"`
 	Type      string `bson:"type"`
 	Mime      string `bson:"mime"`
 	Name      string `bson:"name"`

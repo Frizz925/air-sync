@@ -41,7 +41,7 @@ type GooglePubSubBrokerService struct {
 	initialized bool
 }
 
-var _ Service = (*GooglePubSubBrokerService)(nil)
+var _ Initializer = (*GooglePubSubBrokerService)(nil)
 
 func NewGooglePubSubBrokerService(ctx context.Context, opts GooglePubSubBrokerOptions) *GooglePubSubBrokerService {
 	return &GooglePubSubBrokerService{

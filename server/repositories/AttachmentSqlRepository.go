@@ -35,9 +35,17 @@ func (r *AttachmentSqlRepository) Find(id string) (models.Attachment, error) {
 	return orm.ToAttachmentModel(attachment), r.crudError(err)
 }
 
+func (r *AttachmentSqlRepository) FindOrphans() ([]models.Attachment, error) {
+	return make([]models.Attachment, 0), ErrNotImplemented
+}
+
 func (r *AttachmentSqlRepository) Delete(id string) error {
 	err := r.db.Delete(orm.Attachment{}, id).Error
 	return r.crudError(err)
+}
+
+func (r *AttachmentSqlRepository) DeleteMany(ids []string) (int, error) {
+	return 0, ErrNotImplemented
 }
 
 func (r *AttachmentSqlRepository) crudError(err error) error {

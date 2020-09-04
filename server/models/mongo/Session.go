@@ -7,15 +7,13 @@ import (
 )
 
 type Session struct {
-	ID        string    `bson:"_id"`
-	Messages  []Message `bson:"messages"`
-	CreatedAt int64     `bson:"created_at"`
+	ID        string `bson:"id"`
+	CreatedAt int64  `bson:"created_at"`
 }
 
 func NewSession() Session {
 	return Session{
 		ID:        uuid.NewV4().String(),
-		Messages:  make([]Message, 0),
 		CreatedAt: models.Timestamp(),
 	}
 }

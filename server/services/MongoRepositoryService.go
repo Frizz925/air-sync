@@ -53,11 +53,20 @@ func (s *MongoRepositoryService) Initialize() error {
 		return err
 	}
 	log.Infof("Connected to MongoDB")
-
 	log.Infof("Using MongoDB database: %s", s.database)
 	db := client.Database(s.database)
-	s.sessionRepository = repos.NewSessionMongoRepository(s.context, db)
-	s.attachmentRepository = repos.NewAttachmentMongoRepository(s.context, db)
+
+	sessionRepo := repos.NewSessionMongoRepository(s.context, db)
+	if err := sessionRepo.Migrate(); err != nil {
+		return err
+	}
+	s.sessionRepository = sessionRepo
+
+	attachmentRepo := repos.NewAttachmentMongoRepository(s.context, db)
+	if err := attachmentRepo.Migrate(); err != nil {
+		return err
+	}
+	s.attachmentRepository = attachmentRepo
 
 	s.initialized = true
 	return nil

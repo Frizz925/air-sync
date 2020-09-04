@@ -27,15 +27,17 @@ type MonolithicApplication struct {
 	BucketName  string
 	UploadsDir  string
 
+	CronEnvironment string
+
 	EnableCORS bool
 }
 
 var _ Application = (*MonolithicApplication)(nil)
 
-func (s *MonolithicApplication) Start(ctx context.Context) error {
+func (a *MonolithicApplication) Start(ctx context.Context) error {
 	repos := services.NewMongoRepositoryService(ctx, services.MongoRepositoryOptions{
-		URL:      s.Mongo.URL,
-		Database: s.Mongo.Database,
+		URL:      a.Mongo.URL,
+		Database: a.Mongo.Database,
 	})
 	if err := repos.Initialize(); err != nil {
 		return err
@@ -43,9 +45,9 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 	defer repos.Deinitialize()
 
 	storageService := services.NewStorageService(ctx, services.StorageOptions{
-		StorageMode: s.StorageMode,
-		BucketName:  s.BucketName,
-		UploadsDir:  s.UploadsDir,
+		StorageMode: services.StorageMode(a.StorageMode),
+		BucketName:  a.BucketName,
+		UploadsDir:  a.UploadsDir,
 	})
 	if err := storageService.Initialize(); err != nil {
 		return err
@@ -53,9 +55,9 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 	defer storageService.Deinitialize()
 
 	eventBroker := services.NewEventBrokerService(ctx, services.EventBrokerOptions{
-		Service:      s.EventService,
-		Redis:        s.Redis,
-		GooglePubSub: s.GooglePubSub,
+		Service:      services.EventService(a.EventService),
+		Redis:        a.Redis,
+		GooglePubSub: a.GooglePubSub,
 	})
 	if err := eventBroker.Initialize(); err != nil {
 		return err
@@ -75,7 +77,7 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 	handlers.NewWebSocketHandler(handlers.WebSocketOptions{
 		Repository: repos.SessionRepository(),
 		Publisher:  eventBroker.Publisher(),
-		EnableCORS: s.EnableCORS,
+		EnableCORS: a.EnableCORS,
 	}).RegisterRoutes(router)
 	handlers.NewStreamingHandler(
 		repos.SessionRepository(),
@@ -91,6 +93,16 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 		storageService.Storage(),
 	).RegisterRoutes(router)
 
+	handlers.NewCronHandler(
+		handlers.CronEnvironment(a.CronEnvironment),
+		services.NewCronJobService(services.CronJobOptions{
+			SessionRepository:    repos.SessionRepository(),
+			AttachmentRepository: repos.AttachmentRepository(),
+			Publisher:            eventBroker.Publisher(),
+			Storage:              storageService.Storage(),
+		}),
+	).RegisterRoutes(router)
+
 	handlers.NewWebHandler(handlers.WebOptions{
 		PublicPath:   "public",
 		IndexFile:    "index.html",
@@ -99,8 +111,8 @@ func (s *MonolithicApplication) Start(ctx context.Context) error {
 
 	srv := &WebApplication{
 		Router:     router,
-		Addr:       s.Addr,
-		EnableCORS: s.EnableCORS,
+		Addr:       a.Addr,
+		EnableCORS: a.EnableCORS,
 	}
 	return srv.Start(ctx)
 }

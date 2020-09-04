@@ -9,6 +9,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type EventService string
+
+const (
+	EventServiceRedis  EventService = "redis"
+	EventServicePubSub EventService = "pubsub"
+)
+
 type RedisOptions struct {
 	Addr     string
 	Password string
@@ -21,7 +28,7 @@ type GooglePubSubOptions struct {
 }
 
 type EventBrokerOptions struct {
-	Service      string
+	Service      EventService
 	Redis        RedisOptions
 	GooglePubSub GooglePubSubOptions
 }
@@ -30,11 +37,11 @@ type EventBrokerService struct {
 	EventBrokerOptions
 	context     context.Context
 	pub         *pubsub.Publisher
-	broker      Service
+	broker      interface{}
 	initialized bool
 }
 
-var _ Service = (*EventBrokerService)(nil)
+var _ Initializer = (*EventBrokerService)(nil)
 
 func NewEventBrokerService(ctx context.Context, opts EventBrokerOptions) *EventBrokerService {
 	return &EventBrokerService{
@@ -52,13 +59,13 @@ func (s *EventBrokerService) Initialize() error {
 	s.pub.Topic(events.EventSession).Subscribe().
 		ForEachAsync(s.context, s.handleSessionEvent, s.handleError)
 	switch s.Service {
-	case "Redis":
+	case EventServiceRedis:
 		s.broker = NewRedisBrokerService(s.context, RedisBrokerOptions{
 			Publisher: s.pub,
 			Addr:      s.Redis.Addr,
 			Password:  s.Redis.Password,
 		})
-	case "GooglePubSub":
+	case EventServicePubSub:
 		s.broker = NewGooglePubSubBrokerService(s.context, GooglePubSubBrokerOptions{
 			Publisher:      s.pub,
 			ProjectID:      s.GooglePubSub.ProjectID,
@@ -66,8 +73,8 @@ func (s *EventBrokerService) Initialize() error {
 			SubscriptionID: s.GooglePubSub.SubscriptionID,
 		})
 	}
-	if s.broker != nil {
-		if err := s.broker.Initialize(); err != nil {
+	if v, ok := s.broker.(Initializer); ok {
+		if err := v.Initialize(); err != nil {
 			return err
 		}
 	}
@@ -80,8 +87,8 @@ func (s *EventBrokerService) Deinitialize() {
 		return
 	}
 	s.pub.Topic(events.EventSession).Close()
-	if s.broker != nil {
-		s.broker.Deinitialize()
+	if v, ok := s.broker.(Initializer); ok {
+		v.Deinitialize()
 	}
 	s.initialized = false
 }

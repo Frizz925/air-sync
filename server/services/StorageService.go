@@ -5,8 +5,16 @@ import (
 	"context"
 )
 
+type StorageMode string
+
+const (
+	StorageModeLocal        StorageMode = "local"
+	StorageModeCloudStorage StorageMode = "cloud_storage"
+	StorageModeCache        StorageMode = "cache"
+)
+
 type StorageOptions struct {
-	StorageMode string
+	StorageMode StorageMode
 	BucketName  string
 	UploadsDir  string
 }
@@ -15,7 +23,7 @@ type StorageService struct {
 	storage storages.Storage
 }
 
-var _ Service = (*StorageService)(nil)
+var _ Initializer = (*StorageService)(nil)
 
 func NewStorageService(ctx context.Context, opts StorageOptions) *StorageService {
 	fileStorage := storages.NewFileStorage(opts.UploadsDir)
@@ -23,12 +31,12 @@ func NewStorageService(ctx context.Context, opts StorageOptions) *StorageService
 	service := &StorageService{}
 
 	switch opts.StorageMode {
-	case "Cache":
+	case StorageModeCache:
 		service.storage = storages.NewCacheStorage(
 			fileStorage,
 			cloudStorage,
 		)
-	case "GoogleCloudStorage":
+	case StorageModeCloudStorage:
 		service.storage = cloudStorage
 	default:
 		service.storage = fileStorage
