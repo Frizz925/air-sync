@@ -42,6 +42,10 @@ func (r *SessionSqlRepository) Find(id string) (models.Session, error) {
 	return orm.ToSessionModel(session), r.sessionCrudError(err)
 }
 
+func (r *SessionSqlRepository) FindBefore(t time.Time) ([]models.Session, error) {
+	return nil, ErrNotImplemented
+}
+
 func (r *SessionSqlRepository) InsertMessage(id string, arg models.InsertMessage) (models.Message, error) {
 	message := orm.FromInsertMessageModel(id, arg)
 	err := r.db.Create(&message).Error
@@ -61,7 +65,7 @@ func (r *SessionSqlRepository) Delete(id string) error {
 	return r.sessionCrudError(err)
 }
 
-func (r *SessionSqlRepository) DeleteBefore(t time.Time) (int, error) {
+func (r *SessionSqlRepository) DeleteMany(ids []string) (int, error) {
 	return 0, ErrNotImplemented
 }
 

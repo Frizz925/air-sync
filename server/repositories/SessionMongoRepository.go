@@ -119,6 +119,25 @@ func (r *SessionMongoRepository) Find(id string) (models.Session, error) {
 	return mongoModels.ToSessionModel(session, messageResults), nil
 }
 
+func (r *SessionMongoRepository) FindBefore(t time.Time) ([]models.Session, error) {
+	sessions := make([]models.Session, 0)
+	cur, err := r.sessions.Find(r.context, bson.M{
+		"created_at": bson.M{"$lt": t.Unix()},
+	})
+	if err != nil {
+		return sessions, err
+	}
+	defer cur.Close(r.context)
+	for cur.Next(r.context) {
+		session := mongoModels.Session{}
+		if err := cur.Decode(&session); err != nil {
+			return sessions, err
+		}
+		sessions = append(sessions, mongoModels.ToSessionModel(session, nil))
+	}
+	return sessions, nil
+}
+
 func (r *SessionMongoRepository) InsertMessage(id string, arg models.InsertMessage) (models.Message, error) {
 	cur, err := r.sessions.Find(r.context, bson.M{"id": id})
 	if err != nil {
@@ -172,27 +191,28 @@ func (r *SessionMongoRepository) FindAttachments(ids bson.A) (map[string]mongoMo
 }
 
 func (r *SessionMongoRepository) Delete(id string) error {
-	{
-		_, err := r.messages.DeleteMany(r.context, bson.M{"session_id": id})
-		if err != nil {
-			return err
-		}
+	_, err := r.messages.DeleteMany(r.context, bson.M{"session_id": id})
+	if err != nil {
+		return err
 	}
-	{
-		res, err := r.sessions.DeleteOne(r.context, bson.M{"id": id})
-		if err != nil {
-			return err
-		} else if res.DeletedCount <= 0 {
-			return ErrSessionNotFound
-		}
+	res, err := r.sessions.DeleteOne(r.context, bson.M{"id": id})
+	if err != nil {
+		return err
+	} else if res.DeletedCount <= 0 {
+		return ErrSessionNotFound
 	}
 	return nil
 }
 
-func (r *SessionMongoRepository) DeleteBefore(t time.Time) (int, error) {
-	ts := t.UnixNano() / int64(time.Millisecond)
+func (r *SessionMongoRepository) DeleteMany(ids []string) (int, error) {
+	_, err := r.messages.DeleteMany(r.context, bson.M{
+		"session_id": bson.M{"$in": ids},
+	})
+	if err != nil {
+		return 0, err
+	}
 	res, err := r.sessions.DeleteMany(r.context, bson.M{
-		"created_at": bson.M{"$lt": ts},
+		"id": bson.M{"$in": ids},
 	})
 	return int(res.DeletedCount), err
 }
