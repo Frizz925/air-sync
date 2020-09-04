@@ -1,7 +1,10 @@
 runtime: go114
 env_variables:
   APP_MODE: production
+inbound_services:
+  - warmup
 automatic_scaling:
+  min_instances: 1
   max_instances: 2
   target_cpu_utilization: 0.95
   target_throughput_utilization: 0.95

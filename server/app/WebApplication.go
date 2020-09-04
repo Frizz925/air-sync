@@ -1,6 +1,7 @@
 package app
 
 import (
+	"air-sync/util"
 	"context"
 	"net"
 	"net/http"
@@ -20,6 +21,8 @@ type WebApplication struct {
 var _ Application = (*WebApplication)(nil)
 
 func (s *WebApplication) Start(ctx context.Context) error {
+	s.Router.HandleFunc("/_ah/warmup", util.WrapHandlerFunc(s.handleWarmup))
+
 	err := s.Router.Walk(func(r *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		t, err := r.GetPathTemplate()
 		if err != nil {
@@ -75,4 +78,9 @@ func (s *WebApplication) Start(ctx context.Context) error {
 
 	log.Info("Server shutdown properly")
 	return nil
+}
+
+func (s *WebApplication) handleWarmup(req *http.Request) (*util.Response, error) {
+	util.RequestLogger(req).Info("Warmup request received")
+	return util.SuccessResponse, nil
 }
