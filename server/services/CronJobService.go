@@ -1,6 +1,7 @@
 package services
 
 import (
+	"air-sync/models/events"
 	repos "air-sync/repositories"
 	"air-sync/storages"
 	"air-sync/util/pubsub"
@@ -20,7 +21,7 @@ type CronJobOptions struct {
 type CronJobService struct {
 	sessionRepo    repos.SessionRepository
 	attachmentRepo repos.AttachmentRepository
-	pub            *pubsub.Publisher
+	topic          *pubsub.Topic
 	storage        storages.Storage
 }
 
@@ -28,7 +29,7 @@ func NewCronJobService(opts CronJobOptions) *CronJobService {
 	return &CronJobService{
 		sessionRepo:    opts.SessionRepository,
 		attachmentRepo: opts.AttachmentRepository,
-		pub:            opts.Publisher,
+		topic:          opts.Publisher.Topic(events.EventSession),
 		storage:        opts.Storage,
 	}
 }
@@ -36,9 +37,23 @@ func NewCronJobService(opts CronJobOptions) *CronJobService {
 func (s *CronJobService) RunCleanupJob() error {
 	{
 		s.log("Deleting old sessions")
-		n, err := s.sessionRepo.DeleteBefore(time.Now().Add(-24 * time.Hour))
+		sessions, err := s.sessionRepo.FindBefore(time.Now().Add(-24 * time.Hour))
 		if err != nil {
 			return err
+		}
+		sessionIds := make([]string, len(sessions))
+		for idx, session := range sessions {
+			sessionIds[idx] = session.ID
+		}
+		n, err := s.sessionRepo.DeleteMany(sessionIds)
+		if err != nil {
+			return err
+		}
+		for _, id := range sessionIds {
+			s.topic.Publish(events.CreateSessionEvent(
+				id, events.EventSessionDeleted,
+				events.SessionDelete(id), nil,
+			))
 		}
 		s.log("Deleted %d session(s)", n)
 	}
@@ -55,6 +70,17 @@ func (s *CronJobService) RunCleanupJob() error {
 		n, err := s.attachmentRepo.DeleteMany(attachmentIds)
 		if err != nil {
 			return err
+		}
+		for _, id := range attachmentIds {
+			exists, err := s.storage.Exists(id)
+			if err != nil {
+				return err
+			} else if !exists {
+				continue
+			}
+			if err := s.storage.Delete(id); err != nil {
+				return err
+			}
 		}
 		s.log("Deleted %d attachment(s)", n)
 	}
