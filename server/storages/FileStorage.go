@@ -63,6 +63,10 @@ func (s *FileStorage) Write(name string) (io.WriteCloser, error) {
 	return os.Create(s.getPath(name))
 }
 
+func (s *FileStorage) Delete(name string) error {
+	return os.Remove(s.getPath(name))
+}
+
 func (s *FileStorage) getPath(name string) string {
 	return filepath.Join(s.absDir, filepath.Clean(name))
 }

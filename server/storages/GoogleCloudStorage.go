@@ -56,3 +56,7 @@ func (s *GoogleCloudStorage) Read(name string) (io.ReadCloser, error) {
 func (s *GoogleCloudStorage) Write(name string) (io.WriteCloser, error) {
 	return s.bucket.Object(name).NewWriter(s.context), nil
 }
+
+func (s *GoogleCloudStorage) Delete(name string) error {
+	return s.bucket.Object(name).Delete(s.context)
+}

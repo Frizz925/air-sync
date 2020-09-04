@@ -6,6 +6,7 @@ type Storage interface {
 	Exists(name string) (bool, error)
 	Read(name string) (io.ReadCloser, error)
 	Write(name string) (io.WriteCloser, error)
+	Delete(name string) error
 }
 
 type Initializer interface {

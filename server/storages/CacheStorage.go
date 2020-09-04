@@ -105,6 +105,21 @@ func (s *CacheStorage) Write(name string) (io.WriteCloser, error) {
 	return NewCacheWriteCloser(writers...), nil
 }
 
+func (s *CacheStorage) Delete(name string) error {
+	for _, storage := range s.storages {
+		exists, err := storage.Exists(name)
+		if err != nil {
+			return err
+		} else if !exists {
+			continue
+		}
+		if err := storage.Delete(name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (rwc *CacheReadWriteCloser) Read(b []byte) (int, error) {
 	n, err := rwc.ReadCloser.Read(b)
 	if err != nil {
