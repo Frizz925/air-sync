@@ -13,6 +13,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const attachmentMaxSize int64 = 2 << 20
+
+var ErrUploadFileTooLarge = errors.New("Uploaded file too large")
+
 var ResAttachmentNotFound = &util.Response{
 	StatusCode:  404,
 	ContentType: "text/plain",
@@ -35,7 +39,7 @@ func (h *AttachmentHandler) RegisterRoutes(r *mux.Router) {
 }
 
 func (h *AttachmentHandler) UploadAttachment(req *http.Request) (*util.RestResponse, error) {
-	if err := req.ParseMultipartForm(2 << 20); err != nil {
+	if err := req.ParseMultipartForm(attachmentMaxSize); err != nil {
 		return h.requestError(req, err)
 	}
 	file, header, err := req.FormFile("file")
@@ -43,6 +47,9 @@ func (h *AttachmentHandler) UploadAttachment(req *http.Request) (*util.RestRespo
 		return h.requestError(req, err)
 	}
 	defer file.Close()
+	if header.Size > attachmentMaxSize {
+		return h.requestError(req, ErrUploadFileTooLarge)
+	}
 
 	buf := make([]byte, 512)
 	n, err := io.ReadFull(file, buf)
