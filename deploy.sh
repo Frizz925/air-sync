@@ -17,6 +17,7 @@ echo "Public directory copied."
 
 echo "Deploying service to Google App Engine..."
 gcloud app deploy
+gcloud app deploy cron.yaml
 echo "Service deployed."
 
 echo "Finished."
