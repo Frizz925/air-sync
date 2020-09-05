@@ -1,0 +1,27 @@
+.outer {
+  @apply fixed left-0 w-full pointer-events-none;
+  @apply duration-700 ease-in;
+
+  bottom: -100%;
+  transition-property: bottom;
+}
+
+.outer.shown {
+  @apply duration-500 ease-out;
+
+  bottom: 0%;
+}
+
+.container {
+  @apply flex flex-row justify-center p-2 max-w-md;
+}
+
+.card {
+  @apply bg-white text-gray-900 shadow-lg;
+  @apply rounded-md p-2 w-full;
+  @apply pointer-events-auto;
+}
+
+.card.error {
+  @apply bg-red-600 text-gray-300;
+}

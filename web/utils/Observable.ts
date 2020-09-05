@@ -11,7 +11,7 @@ export class Observable<T> {
 
   private nextId = 1;
 
-  public subscribe(callback: ObserverCallback<T>) {
+  public subscribe(callback: ObserverCallback<T>): Observer<T> {
     const id = this.nextId++;
     const observer = new Observer(id, this, callback);
     this.observers[id] = observer;

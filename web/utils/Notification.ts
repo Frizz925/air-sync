@@ -1,3 +1,5 @@
+import { IS_BROWSER } from './Env';
+
 const notificationEnabled =
   process.env.NEXT_PUBLIC_NOTIFICATION_ENABLED === 'true';
 
@@ -5,7 +7,7 @@ export class NotificationHelper {
   private notificationAllowed = false;
 
   public initialize() {
-    if (!process.browser) return;
+    if (!IS_BROWSER) return;
     if (!notificationEnabled) return;
     if (!('Notification' in window)) return;
     Notification.requestPermission().then(
