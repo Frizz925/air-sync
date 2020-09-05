@@ -15,15 +15,20 @@ import (
 )
 
 var (
-	ResSessionNotFound = util.RestResponse{
+	RestSessionNotFound = util.RestResponse{
 		StatusCode: http.StatusNotFound,
 		Message:    "Resource not found",
 		Error:      "Session not found",
 	}
-	ResMessageNotFound = util.RestResponse{
+	RestMessageNotFound = util.RestResponse{
 		StatusCode: http.StatusNotFound,
 		Message:    "Resource not found",
 		Error:      "Message not found",
+	}
+	RestAttachmentNotFound = util.RestResponse{
+		StatusCode: http.StatusNotFound,
+		Message:    "Resource not found",
+		Error:      "Attachment not found",
 	}
 )
 
@@ -74,9 +79,11 @@ func (h *SessionHandler) WrapSessionHandlerFunc(handler SessionHandlerFunc) http
 func (h *SessionHandler) HandleSessionRestError(err error) (*util.RestResponse, error) {
 	switch err {
 	case repos.ErrSessionNotFound:
-		return &ResSessionNotFound, nil
+		return &RestSessionNotFound, nil
 	case repos.ErrMessageNotFound:
-		return &ResMessageNotFound, nil
+		return &RestMessageNotFound, nil
+	case repos.ErrAttachmentNotFound:
+		return &RestAttachmentNotFound, nil
 	}
 	return nil, err
 }
@@ -87,6 +94,8 @@ func (h *SessionHandler) HandleSessionError(w http.ResponseWriter, err error) {
 	case repos.ErrSessionNotFound:
 		code = http.StatusNotFound
 	case repos.ErrMessageNotFound:
+		code = http.StatusNotFound
+	case repos.ErrAttachmentNotFound:
 		code = http.StatusNotFound
 	}
 	http.Error(w, err.Error(), code)
