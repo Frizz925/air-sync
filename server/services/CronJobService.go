@@ -80,10 +80,6 @@ func (s *CronJobService) RunCleanupJob() error {
 		for idx, attachment := range attachments {
 			attachmentIds[idx] = attachment.ID
 		}
-		n, err := s.attachmentRepo.DeleteMany(attachmentIds)
-		if err != nil {
-			return err
-		}
 		for _, id := range attachmentIds {
 			exists, err := s.storage.Exists(id)
 			if err != nil {
@@ -94,6 +90,10 @@ func (s *CronJobService) RunCleanupJob() error {
 			if err := s.storage.Delete(id); err != nil {
 				return err
 			}
+		}
+		n, err := s.attachmentRepo.DeleteMany(attachmentIds)
+		if err != nil {
+			return err
 		}
 		s.log("Deleted %d attachment(s)", n)
 	}
