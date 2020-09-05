@@ -28,7 +28,7 @@ export default function App({ Component, pageProps }: AppProps) {
     setTimeout(() => {
       setShown(false);
       setTimeout(() => workQueue(true), 1000);
-    }, 3000);
+    }, alert.duration || 3000);
   }, []);
 
   useEffect(() => {

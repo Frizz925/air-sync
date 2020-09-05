@@ -3,6 +3,7 @@ import SessionApi from '@/api/SessionApi';
 import Dialog from '@/components/common/Dialog';
 import IconButton from '@/components/common/IconButton';
 import * as Clipboard from '@/utils/Clipboard';
+import { handleErrorAlert } from '@/utils/Error';
 import {
   faCopy,
   faQrcode,
@@ -42,6 +43,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
       setDialogShown(true);
     } catch (err) {
       console.error(err);
+      handleErrorAlert(err);
     }
   };
 
@@ -53,6 +55,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
       onDelete();
     } catch (err) {
       console.error(err);
+      handleErrorAlert(err);
     }
   };
 

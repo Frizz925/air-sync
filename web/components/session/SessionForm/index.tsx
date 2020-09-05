@@ -7,6 +7,7 @@ import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import IconButton from '@/components/common/IconButton';
 import TextBox from '@/components/common/TextBox';
+import { handleErrorAlert } from '@/utils/Error';
 import {
   faFileAlt as faFile,
   faImage,
@@ -101,6 +102,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
       resetForm();
     } catch (err) {
       console.error(err);
+      handleErrorAlert(err);
     } finally {
       setProcessing(false);
     }

@@ -3,6 +3,7 @@ import SessionApi from '@/api/SessionApi';
 import Card from '@/components/common/Card';
 import IconButton from '@/components/common/IconButton';
 import * as Clipboard from '@/utils/Clipboard';
+import { handleErrorAlert } from '@/utils/Error';
 import { formatShortTimestamp, formatTimestamp } from '@/utils/Time';
 import { getAttachmentUrl } from '@/utils/Url';
 import {
@@ -40,6 +41,7 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
       await api.deleteMessage(sessionId, message.id);
     } catch (err) {
       console.error(err);
+      handleErrorAlert(err);
     }
   };
 

@@ -14,6 +14,7 @@ import Card from '@/components/common/Card';
 import ConnectionState from '@/components/models/ConnectionState';
 import SessionActions from '@/components/session/SessionActions';
 import SessionIndicator from '@/components/session/SessionIndicator';
+import { handleErrorAlert } from '@/utils/Error';
 import { NotificationHelper } from '@/utils/Notification';
 import { getAttachmentUrl, getBaseUrl } from '@/utils/Url';
 import { AxiosError } from 'axios';
@@ -56,6 +57,7 @@ export default function SessionPage() {
   const runningRef = useRef(true);
   const handleError = (error: Error) => {
     console.error(error);
+    handleErrorAlert(error);
     runningRef.current = false;
     router.push('/');
   };
@@ -199,6 +201,7 @@ export default function SessionPage() {
     } catch (err) {
       setConnectionState(ConnectionState.DISCONNECTED);
       console.error(err);
+      handleErrorAlert(err);
       if (err.response) {
         const resp = (err as AxiosError).response;
         if (resp.status === 404) {
@@ -241,7 +244,10 @@ export default function SessionPage() {
         console.error(err);
         return doLongPolling(sessionId);
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        handleErrorAlert(err);
+      });
   };
 
   const handleDelete = () => {

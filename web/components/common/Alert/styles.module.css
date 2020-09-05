@@ -17,6 +17,7 @@
 }
 
 .card {
+  @apply flex flex-row items-center;
   @apply bg-white text-gray-900 shadow-lg;
   @apply rounded-md p-2 w-full;
   @apply pointer-events-auto;
@@ -24,4 +25,8 @@
 
 .card.error {
   @apply bg-red-600 text-gray-300;
+}
+
+.message {
+  @apply px-2;
 }

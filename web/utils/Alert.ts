@@ -6,6 +6,7 @@ const ALERT_OBSERVABLE = 'alertObservable';
 export interface AlertMessage {
   type: 'info' | 'error';
   message: string;
+  duration?: number;
 }
 
 export type ObservableAlert = Observable<AlertMessage>;
