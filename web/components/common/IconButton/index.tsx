@@ -8,6 +8,7 @@ export interface IconButtonProps {
   size?: string | number;
   color?: string;
   icon: IconProp;
+  title?: string;
   onClick?: () => void;
 }
 
@@ -15,6 +16,7 @@ const IconButton: React.FC<IconButtonProps> = ({
   size,
   color,
   icon,
+  title,
   onClick,
 }) => {
   const classes = clsx(styles.container, styles[color]);
@@ -22,7 +24,7 @@ const IconButton: React.FC<IconButtonProps> = ({
     ? ({ height: size, width: size } as React.CSSProperties)
     : null;
   return (
-    <button className={classes} style={style} onClick={onClick}>
+    <button className={classes} style={style} title={title} onClick={onClick}>
       <div className={styles.icon}>
         <FontAwesomeIcon icon={icon} />
       </div>

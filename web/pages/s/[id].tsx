@@ -13,16 +13,22 @@ import {
 import Card from '@/components/common/Card';
 import ConnectionState from '@/components/models/ConnectionState';
 import SessionActions from '@/components/session/SessionActions';
-import SessionForm from '@/components/session/SessionForm';
 import SessionIndicator from '@/components/session/SessionIndicator';
-import SessionMessage from '@/components/session/SessionMessage';
 import { NotificationHelper } from '@/utils/Notification';
 import { getAttachmentUrl, getBaseUrl } from '@/utils/Url';
 import { AxiosError } from 'axios';
-import map from 'lodash/map';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { resolve } from 'path';
 import React, { useEffect, useRef, useState } from 'react';
+
+const SessionForm = dynamic(() => import('@/components/session/SessionForm'), {
+  ssr: false,
+});
+const SessionMessages = dynamic(
+  () => import('@/components/session/SessionMessages'),
+  { ssr: false }
+);
 
 const baseUrl = getBaseUrl();
 
@@ -254,18 +260,8 @@ export default function SessionPage() {
     };
   }, [sessionId]);
 
-  const messageComponents = map(messages, (message) => (
-    <SessionMessage
-      key={message.id}
-      api={sessionApi}
-      sessionId={sessionId}
-      message={message}
-      timestamp={timestamp}
-    />
-  ));
-
   return (
-    <div className='container container-main space-y-4'>
+    <div className='container-main space-y-4'>
       <Card>
         <div className='py-2 px-4'>
           <SessionIndicator
@@ -282,7 +278,12 @@ export default function SessionPage() {
         />
       </Card>
       <SessionForm api={sessionApi} sessionId={sessionId} />
-      {messageComponents}
+      <SessionMessages
+        api={sessionApi}
+        sessionId={sessionId}
+        messages={messages}
+        timestamp={timestamp}
+      />
     </div>
   );
 }

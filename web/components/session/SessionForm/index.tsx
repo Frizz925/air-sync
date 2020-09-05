@@ -8,12 +8,12 @@ import Card from '@/components/common/Card';
 import IconButton from '@/components/common/IconButton';
 import TextBox from '@/components/common/TextBox';
 import {
-  faEyeSlash,
   faFileAlt as faFile,
   faImage,
 } from '@fortawesome/free-regular-svg-icons';
 import {
   faEye,
+  faEyeSlash,
   faFileAlt as faFileSolid,
   faImage as faImageSolid,
   faTimes,
@@ -117,6 +117,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
 
   const handleAttachmentFile = (file: File, image: boolean) => {
     if (image) handleFileImage(file);
+    else setImageSrc(undefined);
     attachmentRef.current = {
       file: file,
       name: file.name,
@@ -194,6 +195,11 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
 
   const textBoxCls = clsx(dragging && 'pointer-events-none');
 
+  const actionsCls = clsx(
+    'flex flex-row-reverse items-center px-1',
+    processing && 'hidden'
+  );
+
   return (
     <Card className='card py-2 space-y-2'>
       <div
@@ -214,7 +220,9 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
       </div>
       {imageSrc && (
         <div className='flex justify-center'>
-          <img src={imageSrc} />
+          <div className='overflow-hidden'>
+            <img src={imageSrc} />
+          </div>
         </div>
       )}
       {attachmentRef.current && (
@@ -223,14 +231,9 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
           <div className={styles.filename}>{attachmentRef.current.name}</div>
         </div>
       )}
-      <div className='flex flex-row-reverse items-center px-1'>
+      <div className={actionsCls}>
         <div className='px-1'>
-          <Button
-            color='primary'
-            className='rounded-full'
-            onClick={handleSend}
-            disabled={!valid || processing}
-          >
+          <Button color='primary' className='rounded-full' onClick={handleSend}>
             Send
           </Button>
         </div>
@@ -238,6 +241,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
           <IconButton
             icon={sensitive ? faEyeSlash : faEye}
             color={sensitive ? 'blue' : ''}
+            title='Toggle sensitive content'
             onClick={handleSensitive}
           />
         </div>
@@ -246,6 +250,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
           <IconButton
             icon={attachment.file ? faFileSolid : faFile}
             color={attachment.file ? 'blue' : ''}
+            title='Attach file'
             onClick={handleFile}
           />
         </div>
@@ -253,6 +258,7 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
           <IconButton
             icon={attachment.image ? faImageSolid : faImage}
             color={attachment.image ? 'blue' : ''}
+            title='Attach image'
             onClick={handleImage}
           />
         </div>

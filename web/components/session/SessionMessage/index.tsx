@@ -5,8 +5,11 @@ import IconButton from '@/components/common/IconButton';
 import * as Clipboard from '@/utils/Clipboard';
 import { formatShortTimestamp, formatTimestamp } from '@/utils/Time';
 import { getAttachmentUrl } from '@/utils/Url';
-import { faCopy, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
-import { faCloudDownloadAlt as faDownload } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCloudDownloadAlt as faDownload,
+  faCopy,
+  faTrashAlt,
+} from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 import MessageContent from '../MessageContent';
 import styles from './styles.module.css';
@@ -40,6 +43,10 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
     }
   };
 
+  const attachmentUrl = attachmentId
+    ? getAttachmentUrl(attachmentId)
+    : undefined;
+
   return (
     <Card className='text-sm whitespace-pre-wrap'>
       <div className='pt-2 space-y-2'>
@@ -55,10 +62,10 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
         <div>
           <IconButton icon={faCopy} onClick={handleCopy} />
         </div>
-        {attachmentId && (
+        {attachmentUrl && (
           <div className='flex items-center overflow-hidden'>
             <a
-              href={getAttachmentUrl(attachmentId)}
+              href={attachmentUrl}
               title={attachmentName}
               download={attachmentName}
               target='_blank'
@@ -66,7 +73,16 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
             >
               <IconButton icon={faDownload} />
             </a>
-            <div className={styles.attachmentName}>{attachmentName}</div>
+            <div className={styles.attachmentName}>
+              <a
+                href={attachmentUrl}
+                title={attachmentName}
+                target='_blank'
+                rel='noreferrer'
+              >
+                {attachmentName}
+              </a>
+            </div>
           </div>
         )}
         <div className='flex-grow'></div>

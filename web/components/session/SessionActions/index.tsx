@@ -63,11 +63,31 @@ const SessionActions: React.FC<SessionActionsProps> = ({
   return (
     <React.Fragment>
       <div className='flex flex-row px-1 py-2'>
-        <IconButton icon={faQrcode} color='blue' onClick={handleQrImage} />
-        <IconButton icon={faCopy} color='blue' onClick={handleCopy} />
-        <IconButton icon={faSync} color='blue' onClick={onReload} />
+        <IconButton
+          icon={faQrcode}
+          color='blue'
+          title='Generate QR code'
+          onClick={handleQrImage}
+        />
+        <IconButton
+          icon={faCopy}
+          color='blue'
+          title='Copy session URL'
+          onClick={handleCopy}
+        />
+        <IconButton
+          icon={faSync}
+          color='blue'
+          title='Reload'
+          onClick={onReload}
+        />
         <div className='flex-grow'></div>
-        <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
+        <IconButton
+          icon={faTrashAlt}
+          color='red'
+          title='Delete session'
+          onClick={handleDelete}
+        />
       </div>
       <Dialog shown={dialogShown} onClose={handleClose}>
         <img src={qrImageSrc} />
