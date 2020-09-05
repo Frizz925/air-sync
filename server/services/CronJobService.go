@@ -13,6 +13,7 @@ import (
 )
 
 type CronJobOptions struct {
+	GracePeriod          time.Duration
 	SessionRepository    repos.SessionRepository
 	AttachmentRepository repos.AttachmentRepository
 	Publisher            *pubsub.Publisher
@@ -26,8 +27,11 @@ type CronJobService struct {
 	storage        storages.Storage
 	nextRun        time.Time
 	interval       time.Duration
+	gracePeriod    time.Duration
 	mu             sync.Mutex
 }
+
+var _ Initializer = (*CronJobService)(nil)
 
 func NewCronJobService(opts CronJobOptions) *CronJobService {
 	return &CronJobService{
@@ -37,7 +41,17 @@ func NewCronJobService(opts CronJobOptions) *CronJobService {
 		storage:        opts.Storage,
 		nextRun:        time.Unix(0, 0),
 		interval:       1 * time.Hour,
+		gracePeriod:    opts.GracePeriod,
 	}
+}
+
+func (s *CronJobService) Initialize() error {
+	log.Infof("Initialize cron job cleanup service with grace period: %s", s.gracePeriod.String())
+	return nil
+}
+
+func (s *CronJobService) Deinitialize() {
+	// Do nothing
 }
 
 func (s *CronJobService) RunCleanupJob() error {
@@ -47,7 +61,7 @@ func (s *CronJobService) RunCleanupJob() error {
 		dt := s.nextRun.UTC().Format(time.RFC3339)
 		return NewCronRequestError("No cleanup job run until %s", dt)
 	}
-	deadline := time.Now().Add(-24 * time.Hour)
+	deadline := time.Now().Add(-1 * s.gracePeriod)
 	{
 		s.log("Deleting old sessions")
 		sessions, err := s.sessionRepo.FindBefore(deadline)

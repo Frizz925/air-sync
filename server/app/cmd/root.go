@@ -41,6 +41,12 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
+		gracePeriod, err := util.ParseTimeDuration(util.GetEnvDefault("CLEANUP_GRACE_PERIOD", "0s"))
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
 		err = (&app.MonolithicApplication{
 			Addr: ":" + util.GetEnvDefault("PORT", "8080"),
 			Mongo: app.MongoOptions{
@@ -61,6 +67,7 @@ var rootCmd = &cobra.Command{
 			},
 			EventService:    util.GetEnvDefault("EVENT_SERVICE", ""),
 			CronEnvironment: util.GetEnvDefault("CRON_ENVIRONMENT", ""),
+			GracePeriod:     gracePeriod,
 			EnableCORS:      enableCORS,
 		}).Start(ctx)
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"air-sync/services"
 	"context"
 	"net/url"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -28,6 +29,7 @@ type MonolithicApplication struct {
 	UploadsDir  string
 
 	CronEnvironment string
+	GracePeriod     time.Duration
 
 	EnableCORS bool
 }
@@ -64,6 +66,18 @@ func (a *MonolithicApplication) Start(ctx context.Context) error {
 	}
 	defer eventBroker.Deinitialize()
 
+	cronJobService := services.NewCronJobService(services.CronJobOptions{
+		SessionRepository:    repos.SessionRepository(),
+		AttachmentRepository: repos.AttachmentRepository(),
+		Publisher:            eventBroker.Publisher(),
+		Storage:              storageService.Storage(),
+		GracePeriod:          a.GracePeriod,
+	})
+	if err := cronJobService.Initialize(); err != nil {
+		return err
+	}
+	defer cronJobService.Deinitialize()
+
 	router := mux.NewRouter()
 
 	handlers.NewApiHandler(
@@ -95,12 +109,7 @@ func (a *MonolithicApplication) Start(ctx context.Context) error {
 
 	handlers.NewCronHandler(
 		handlers.CronEnvironment(a.CronEnvironment),
-		services.NewCronJobService(services.CronJobOptions{
-			SessionRepository:    repos.SessionRepository(),
-			AttachmentRepository: repos.AttachmentRepository(),
-			Publisher:            eventBroker.Publisher(),
-			Storage:              storageService.Storage(),
-		}),
+		cronJobService,
 	).RegisterRoutes(router)
 
 	handlers.NewWebHandler(handlers.WebOptions{
