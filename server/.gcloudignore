@@ -12,6 +12,10 @@
 # below:
 .git
 .gitignore
+.editorconfig
+
+.env*
+!.env.production
 
 # Binaries for programs and plugins
 *.exe
