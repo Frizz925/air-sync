@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gorilla/mux"
 )
 
@@ -45,6 +47,10 @@ func (h *CronHandler) CleanupJob(req *http.Request) (*util.Response, error) {
 
 func (h *CronHandler) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		log.WithFields(log.Fields{
+			"cron_env":  h.env,
+			"client_ip": h.GetClientIP(req),
+		}).Info("Receiving cron job request")
 		if !h.ValidateRequest(req) {
 			http.Error(w, "Resource not found", http.StatusNotFound)
 			return
