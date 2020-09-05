@@ -3,21 +3,10 @@ set -e
 
 SCRIPT_DIR=$(realpath $(dirname $0))
 
-echo "Bulding web frontend..."
-cd $SCRIPT_DIR/web
-[ -d out ] && rm -rf out
-yarn build
-echo "Web frontend built."
-
-echo "Copying web frontend into public directory..."
-cd $SCRIPT_DIR/server
-[ -d public ] && rm -rf public 
-cp -rv $SCRIPT_DIR/web/out public
-echo "Public directory copied."
+bash $SCRIPT_DIR/build.sh
 
 echo "Deploying service to Google App Engine..."
+cd $SCRIPT_DIR/server
 gcloud app deploy
 gcloud app deploy cron.yaml
 echo "Service deployed."
-
-echo "Finished."
