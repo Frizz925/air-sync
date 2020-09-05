@@ -2,10 +2,19 @@ package repositories
 
 import "go.mongodb.org/mongo-driver/mongo"
 
-type MongoRepository struct {
-	db *mongo.Database
+type MongoOptions struct {
+	Database *mongo.Database
+	Recreate bool
 }
 
-func NewMongoRepository(db *mongo.Database) *MongoRepository {
-	return &MongoRepository{db}
+type MongoRepository struct {
+	db       *mongo.Database
+	recreate bool
+}
+
+func NewMongoRepository(opts MongoOptions) *MongoRepository {
+	return &MongoRepository{
+		db:       opts.Database,
+		recreate: opts.Recreate,
+	}
 }

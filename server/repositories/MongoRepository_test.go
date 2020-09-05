@@ -25,8 +25,11 @@ func TestMongoRepository(t *testing.T) {
 	db := client.Database("airsync-test")
 	require.Nil(t, db.Drop(ctx))
 
-	sessionRepo := NewSessionMongoRepository(ctx, db)
-	attachmentRepo := NewAttachmentMongoRepository(ctx, db)
+	opts := MongoOptions{db, true}
+	sessionRepo := NewSessionMongoRepository(ctx, opts)
+	require.Nil(t, sessionRepo.Migrate())
+	attachmentRepo := NewAttachmentMongoRepository(ctx, opts)
+	require.Nil(t, attachmentRepo.Migrate())
 
 	attachment, err := attachmentRepo.Create(models.CreateAttachment{})
 	require.Nil(t, err)

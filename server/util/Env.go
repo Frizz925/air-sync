@@ -26,6 +26,14 @@ func GetEnvDefault(name string, def string) string {
 	return def
 }
 
+func GetEnvBoolDefault(name string, def bool) bool {
+	value := GetEnvDefault(name, "")
+	if value == "" {
+		return def
+	}
+	return value == "true"
+}
+
 func EnvMongoUri() string {
 	return GetEnvDefault("MONGODB_URI", "mongodb://localhost:27017")
 }

@@ -52,6 +52,7 @@ var rootCmd = &cobra.Command{
 			Mongo: app.MongoOptions{
 				URL:      mongoUrl,
 				Database: util.GetEnvDefault("MONGODB_DATABASE", "airsync"),
+				Recreate: util.GetEnvBoolDefault("MONGODB_RECREATE", false),
 			},
 			StorageMode: util.GetEnvDefault("STORAGE_MODE", "local"),
 			BucketName:  util.GetEnvDefault("BUCKET_NAME", "airsync"),

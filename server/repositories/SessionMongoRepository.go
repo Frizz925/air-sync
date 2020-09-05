@@ -36,13 +36,13 @@ type mongoSessionQuery struct {
 var _ SessionRepository = (*SessionMongoRepository)(nil)
 var _ RepositoryMigration = (*SessionMongoRepository)(nil)
 
-func NewSessionMongoRepository(ctx context.Context, db *mongo.Database) *SessionMongoRepository {
+func NewSessionMongoRepository(ctx context.Context, opts MongoOptions) *SessionMongoRepository {
 	return &SessionMongoRepository{
-		MongoRepository: NewMongoRepository(db),
+		MongoRepository: NewMongoRepository(opts),
 		context:         ctx,
-		sessions:        db.Collection(MongoSessionCollection),
-		messages:        db.Collection(MongoMessageCollection),
-		attachments:     db.Collection(MongoAttachmentCollection),
+		sessions:        opts.Database.Collection(MongoSessionCollection),
+		messages:        opts.Database.Collection(MongoMessageCollection),
+		attachments:     opts.Database.Collection(MongoAttachmentCollection),
 	}
 }
 

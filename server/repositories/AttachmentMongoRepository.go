@@ -21,11 +21,11 @@ type AttachmentMongoRepository struct {
 var _ AttachmentRepository = (*AttachmentMongoRepository)(nil)
 var _ RepositoryMigration = (*AttachmentMongoRepository)(nil)
 
-func NewAttachmentMongoRepository(ctx context.Context, db *mongo.Database) *AttachmentMongoRepository {
+func NewAttachmentMongoRepository(ctx context.Context, opts MongoOptions) *AttachmentMongoRepository {
 	return &AttachmentMongoRepository{
-		MongoRepository: NewMongoRepository(db),
+		MongoRepository: NewMongoRepository(opts),
 		context:         ctx,
-		attachments:     db.Collection(MongoAttachmentCollection),
+		attachments:     opts.Database.Collection(MongoAttachmentCollection),
 	}
 }
 

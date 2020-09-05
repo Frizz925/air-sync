@@ -13,6 +13,7 @@ import (
 type MongoOptions struct {
 	URL      *url.URL
 	Database string
+	Recreate bool
 }
 
 type MonolithicApplication struct {
@@ -40,6 +41,7 @@ func (a *MonolithicApplication) Start(ctx context.Context) error {
 	repos := services.NewMongoRepositoryService(ctx, services.MongoRepositoryOptions{
 		URL:      a.Mongo.URL,
 		Database: a.Mongo.Database,
+		Recreate: a.Mongo.Recreate,
 	})
 	if err := repos.Initialize(); err != nil {
 		return err

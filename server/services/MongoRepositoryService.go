@@ -14,6 +14,7 @@ import (
 type MongoRepositoryOptions struct {
 	URL      *url.URL
 	Database string
+	Recreate bool
 }
 
 type MongoRepositoryService struct {
@@ -23,6 +24,7 @@ type MongoRepositoryService struct {
 	database             string
 	sessionRepository    *repos.SessionMongoRepository
 	attachmentRepository *repos.AttachmentMongoRepository
+	recreate             bool
 	initialized          bool
 }
 
@@ -33,6 +35,7 @@ func NewMongoRepositoryService(ctx context.Context, opts MongoRepositoryOptions)
 		context:     context.Background(),
 		url:         opts.URL,
 		database:    opts.Database,
+		recreate:    opts.Recreate,
 		initialized: false,
 	}
 }
@@ -55,14 +58,18 @@ func (s *MongoRepositoryService) Initialize() error {
 	log.Infof("Connected to MongoDB")
 	log.Infof("Using MongoDB database: %s", s.database)
 	db := client.Database(s.database)
+	opts := repos.MongoOptions{
+		Database: db,
+		Recreate: s.recreate,
+	}
 
-	sessionRepo := repos.NewSessionMongoRepository(s.context, db)
+	sessionRepo := repos.NewSessionMongoRepository(s.context, opts)
 	if err := sessionRepo.Migrate(); err != nil {
 		return err
 	}
 	s.sessionRepository = sessionRepo
 
-	attachmentRepo := repos.NewAttachmentMongoRepository(s.context, db)
+	attachmentRepo := repos.NewAttachmentMongoRepository(s.context, opts)
 	if err := attachmentRepo.Migrate(); err != nil {
 		return err
 	}
