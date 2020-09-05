@@ -4,6 +4,7 @@ import (
 	"air-sync/models"
 	"air-sync/models/orm"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -35,7 +36,7 @@ func (r *AttachmentSqlRepository) Find(id string) (models.Attachment, error) {
 	return orm.ToAttachmentModel(attachment), r.crudError(err)
 }
 
-func (r *AttachmentSqlRepository) FindOrphans() ([]models.Attachment, error) {
+func (r *AttachmentSqlRepository) FindOrphansBefore(t time.Time) ([]models.Attachment, error) {
 	return make([]models.Attachment, 0), ErrNotImplemented
 }
 

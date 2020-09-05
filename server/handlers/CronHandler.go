@@ -39,6 +39,12 @@ func (h *CronHandler) RegisterRoutes(r *mux.Router) {
 
 func (h *CronHandler) CleanupJob(req *http.Request) (*util.Response, error) {
 	if err := h.cron.RunCleanupJob(); err != nil {
+		if v, ok := err.(services.CronRequestError); ok {
+			return &util.Response{
+				StatusCode: 400,
+				Body:       []byte(v.Error()),
+			}, nil
+		}
 		return nil, err
 	}
 	return util.SuccessResponse, nil

@@ -4,6 +4,7 @@ import (
 	"air-sync/models"
 	mongoModels "air-sync/models/mongo"
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -58,9 +59,12 @@ func (r *AttachmentMongoRepository) Find(id string) (models.Attachment, error) {
 	return mongoModels.ToAttachmentModel(attachment), nil
 }
 
-func (r *AttachmentMongoRepository) FindOrphans() ([]models.Attachment, error) {
+func (r *AttachmentMongoRepository) FindOrphansBefore(t time.Time) ([]models.Attachment, error) {
 	attachments := make([]models.Attachment, 0)
 	cur, err := r.attachments.Aggregate(r.context, bson.A{
+		bson.M{"$match": bson.M{
+			"created_at": bson.M{"$lt": models.FromTime(t)},
+		}},
 		bson.M{"$lookup": bson.M{
 			"from":         MongoMessageCollection,
 			"localField":   "id",

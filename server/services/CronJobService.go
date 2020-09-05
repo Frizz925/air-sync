@@ -6,6 +6,7 @@ import (
 	"air-sync/storages"
 	"air-sync/util/pubsub"
 	"fmt"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -23,6 +24,9 @@ type CronJobService struct {
 	attachmentRepo repos.AttachmentRepository
 	topic          *pubsub.Topic
 	storage        storages.Storage
+	nextRun        time.Time
+	interval       time.Duration
+	mu             sync.Mutex
 }
 
 func NewCronJobService(opts CronJobOptions) *CronJobService {
@@ -31,13 +35,22 @@ func NewCronJobService(opts CronJobOptions) *CronJobService {
 		attachmentRepo: opts.AttachmentRepository,
 		topic:          opts.Publisher.Topic(events.EventSession),
 		storage:        opts.Storage,
+		nextRun:        time.Unix(0, 0),
+		interval:       1 * time.Hour,
 	}
 }
 
 func (s *CronJobService) RunCleanupJob() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if time.Now().Before(s.nextRun) {
+		dt := s.nextRun.UTC().Format(time.RFC3339)
+		return NewCronRequestError("No cleanup job run until %s", dt)
+	}
+	deadline := time.Now().Add(-24 * time.Hour)
 	{
 		s.log("Deleting old sessions")
-		sessions, err := s.sessionRepo.FindBefore(time.Now().Add(-24 * time.Hour))
+		sessions, err := s.sessionRepo.FindBefore(deadline)
 		if err != nil {
 			return err
 		}
@@ -59,13 +72,13 @@ func (s *CronJobService) RunCleanupJob() error {
 	}
 	{
 		s.log("Deleting orphan attachments")
-		attachments, err := s.attachmentRepo.FindOrphans()
+		attachments, err := s.attachmentRepo.FindOrphansBefore(deadline)
 		if err != nil {
 			return err
 		}
 		attachmentIds := make([]string, len(attachments))
-		for _, attachment := range attachments {
-			attachmentIds = append(attachmentIds, attachment.ID)
+		for idx, attachment := range attachments {
+			attachmentIds[idx] = attachment.ID
 		}
 		n, err := s.attachmentRepo.DeleteMany(attachmentIds)
 		if err != nil {
@@ -84,6 +97,7 @@ func (s *CronJobService) RunCleanupJob() error {
 		}
 		s.log("Deleted %d attachment(s)", n)
 	}
+	s.nextRun = time.Now().Add(s.interval)
 	return nil
 }
 
