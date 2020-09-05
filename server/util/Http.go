@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -194,4 +196,20 @@ func WriteResponse(w http.ResponseWriter, req *http.Request, res *Response) {
 			RequestLogger(req).Error(err)
 		}
 	}
+}
+
+func GetClientIP(req *http.Request) string {
+	host := req.Header.Get("X-Real-IP")
+	if host == "" {
+		host = req.Header.Get("X-Forwarded-For")
+	}
+	if host != "" {
+		parts := strings.Split(host, ",")
+		return parts[0]
+	}
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		return ""
+	}
+	return host
 }

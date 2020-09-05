@@ -3,7 +3,6 @@ package handlers
 import (
 	"air-sync/services"
 	"air-sync/util"
-	"net"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -49,7 +48,7 @@ func (h *CronHandler) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		log.WithFields(log.Fields{
 			"cron_env":  h.env,
-			"client_ip": h.GetClientIP(req),
+			"client_ip": util.GetClientIP(req),
 		}).Info("Receiving cron job request")
 		if !h.ValidateRequest(req) {
 			http.Error(w, "Resource not found", http.StatusNotFound)
@@ -65,26 +64,12 @@ func (h *CronHandler) ValidateRequest(req *http.Request) bool {
 		if req.Header.Get("X-Cron-Agent") != "Postman" {
 			return false
 		}
-		return h.GetClientIP(req) == "127.0.0.1"
+		return util.GetClientIP(req) == "127.0.0.1"
 	case CronEnvAppEngine:
 		if req.Header.Get("X-Appengine-Cron") != "true" {
 			return false
 		}
-		return h.GetClientIP(req) == "10.0.0.1"
+		return util.GetClientIP(req) == "10.0.0.1"
 	}
 	return false
-}
-
-func (h *CronHandler) GetClientIP(req *http.Request) string {
-	if host := req.Header.Get("X-Real-IP"); host != "" {
-		return host
-	}
-	if host := req.Header.Get("X-Forwarded-For"); host != "" {
-		return host
-	}
-	host, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
-		return ""
-	}
-	return host
 }
