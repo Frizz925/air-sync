@@ -62,7 +62,7 @@ func (r *AttachmentMongoRepository) FindOrphans() ([]models.Attachment, error) {
 	attachments := make([]models.Attachment, 0)
 	cur, err := r.attachments.Aggregate(r.context, bson.A{
 		bson.M{"$lookup": bson.M{
-			"from":         "messages",
+			"from":         MongoMessageCollection,
 			"localField":   "id",
 			"foreignField": "attachment_id",
 			"as":           "messages",
