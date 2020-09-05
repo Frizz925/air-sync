@@ -23,6 +23,16 @@ type SessionMongoRepository struct {
 	attachments *mongo.Collection
 }
 
+type mongoMessageQuery struct {
+	mongoModels.Message `bson:"inline"`
+	Attachment          mongoModels.Attachment `bson:"attachment"`
+}
+
+type mongoSessionQuery struct {
+	mongoModels.Session `bson:"inline"`
+	Messages            []mongoMessageQuery `bson:"messages"`
+}
+
 var _ SessionRepository = (*SessionMongoRepository)(nil)
 var _ RepositoryMigration = (*SessionMongoRepository)(nil)
 
@@ -68,55 +78,46 @@ func (r *SessionMongoRepository) Create() (models.Session, error) {
 }
 
 func (r *SessionMongoRepository) Find(id string) (models.Session, error) {
-	session := mongoModels.Session{}
-	{
-		cur, err := r.sessions.Find(r.context, bson.M{"id": id})
-		if err != nil {
-			return models.EmptySession, err
-		}
-		defer cur.Close(r.context)
-		if !cur.Next(r.context) {
-			return models.EmptySession, ErrSessionNotFound
-		}
-		if err := cur.Decode(&session); err != nil {
-			return models.EmptySession, err
-		}
+	cur, err := r.sessions.Aggregate(r.context, bson.A{
+		bson.M{"$match": bson.M{"id": id}},
+		bson.M{"$lookup": bson.M{
+			"from": MongoMessageCollection,
+			"let":  bson.M{"session_id": "$id"},
+			"pipeline": bson.A{
+				bson.M{"$match": bson.M{"$expr": bson.M{
+					"$eq": bson.A{"$session_id", "$$session_id"},
+				}}},
+				bson.M{"$sort": bson.M{"created_at": -1}},
+				bson.M{"$lookup": bson.M{
+					"from":         MongoAttachmentCollection,
+					"localField":   "attachment_id",
+					"foreignField": "id",
+					"as":           "attachment",
+				}},
+				bson.M{"$unwind": bson.M{
+					"path":                       "$attachment",
+					"preserveNullAndEmptyArrays": true,
+				}},
+			},
+			"as": "messages",
+		}},
+	})
+	if err != nil {
+		return models.EmptySession, err
 	}
-	messages := make([]mongoModels.Message, 0)
-	{
-		cur, err := r.messages.Find(r.context, bson.M{"session_id": id})
-		if err != nil {
-			return models.EmptySession, err
-		}
-		defer cur.Close(r.context)
-		if err := cur.All(r.context, &messages); err != nil {
-			return models.EmptySession, err
-		}
+	defer cur.Close(r.context)
+	if !cur.Next(r.context) {
+		return models.EmptySession, ErrSessionNotFound
 	}
-	messageResults := make([]models.Message, len(messages))
-	{
-		attachmentSet := make(map[string]bool)
-		attachmentIds := make(bson.A, 0)
-		for _, message := range messages {
-			attachmentId := message.AttachmentID
-			if attachmentId == "" {
-				continue
-			}
-			attachmentSet[attachmentId] = true
-			if _, ok := attachmentSet[attachmentId]; !ok {
-				attachmentIds = append(attachmentIds, attachmentId)
-			}
-		}
-		attachmentMap, err := r.FindAttachments(attachmentIds)
-		if err != nil {
-			return models.EmptySession, err
-		}
-		for idx, message := range messages {
-			attachment := attachmentMap[message.AttachmentID]
-			messageResults[idx] = mongoModels.ToMessageModel(message, attachment)
-		}
+	session := mongoSessionQuery{}
+	if err := cur.Decode(&session); err != nil {
+		return models.EmptySession, err
 	}
-	return mongoModels.ToSessionModel(session, messageResults), nil
+	messages := make([]models.Message, len(session.Messages))
+	for idx, message := range session.Messages {
+		messages[idx] = mongoModels.ToMessageModel(message.Message, message.Attachment)
+	}
+	return mongoModels.ToSessionModel(session.Session, messages), nil
 }
 
 func (r *SessionMongoRepository) FindBefore(t time.Time) ([]models.Session, error) {
