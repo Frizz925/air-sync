@@ -8,7 +8,7 @@ import (
 )
 
 func TestClientIP(t *testing.T) {
-	expectedIP := "10.0.1.0"
+	expectedIP := "10.0.0.1"
 	ips := expectedIP + ", 0.0.0.0"
 	{
 		header := make(http.Header)

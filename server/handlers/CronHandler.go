@@ -69,7 +69,8 @@ func (h *CronHandler) ValidateRequest(req *http.Request) bool {
 		if req.Header.Get("X-Appengine-Cron") != "true" {
 			return false
 		}
-		return util.GetClientIP(req) == "10.0.0.1"
+		clientIP := util.GetClientIP(req)
+		return clientIP == "10.0.0.1" || clientIP == "0.1.0.1"
 	}
 	return false
 }
