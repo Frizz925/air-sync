@@ -3,8 +3,7 @@
 /uploads
 
 credentials.json
-.env.development
-.env.production
+.env.*
 
 # Created by https://www.toptal.com/developers/gitignore/api/go
 # Edit at https://www.toptal.com/developers/gitignore?templates=go
