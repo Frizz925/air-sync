@@ -81,6 +81,9 @@ func (s *CronJobService) RunCleanupJob() error {
 			attachmentIds[idx] = attachment.ID
 		}
 		for _, id := range attachmentIds {
+			if id == "" {
+				continue
+			}
 			exists, err := s.storage.Exists(id)
 			if err != nil {
 				return err
