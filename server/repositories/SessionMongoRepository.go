@@ -123,7 +123,7 @@ func (r *SessionMongoRepository) Find(id string) (models.Session, error) {
 func (r *SessionMongoRepository) FindBefore(t time.Time) ([]models.Session, error) {
 	sessions := make([]models.Session, 0)
 	cur, err := r.sessions.Find(r.context, bson.M{
-		"created_at": bson.M{"$lt": t.Unix()},
+		"created_at": bson.M{"$lt": models.FromTime(t)},
 	})
 	if err != nil {
 		return sessions, err
@@ -148,14 +148,18 @@ func (r *SessionMongoRepository) InsertMessage(id string, arg models.InsertMessa
 	if !cur.TryNext(r.context) {
 		return models.EmptyMessage, ErrSessionNotFound
 	}
+	attachment := mongoModels.EmptyAttachment
+	if arg.AttachmentID != "" {
+		res, err := r.FindOneAttachment(arg.AttachmentID)
+		if err != nil {
+			return models.EmptyMessage, err
+		}
+		attachment = res
+	}
 	message := mongoModels.FromInsertMessageModel(id, arg)
 	if _, err := r.messages.InsertOne(r.context, message); err != nil {
 		return models.EmptyMessage, err
 	}
-	if message.AttachmentID == "" {
-		return mongoModels.ToMessageModel(message, mongoModels.EmptyAttachment), nil
-	}
-	attachment, err := r.FindOneAttachment(message.AttachmentID)
 	return mongoModels.ToMessageModel(message, attachment), err
 }
 
@@ -170,8 +174,16 @@ func (r *SessionMongoRepository) DeleteMessage(id string, messageID string) erro
 }
 
 func (r *SessionMongoRepository) FindOneAttachment(id string) (mongoModels.Attachment, error) {
-	attachmentMap, err := r.FindAttachments(bson.A{id})
-	return attachmentMap[id], err
+	cur, err := r.attachments.Find(r.context, bson.M{"id": id})
+	if err != nil {
+		return mongoModels.EmptyAttachment, err
+	}
+	defer cur.Close(r.context)
+	if !cur.Next(r.context) {
+		return mongoModels.EmptyAttachment, ErrAttachmentNotFound
+	}
+	attachment := mongoModels.Attachment{}
+	return attachment, cur.Decode(&attachment)
 }
 
 func (r *SessionMongoRepository) FindAttachments(ids bson.A) (map[string]mongoModels.Attachment, error) {
