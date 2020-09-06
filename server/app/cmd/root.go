@@ -41,7 +41,7 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		gracePeriod, err := util.ParseTimeDuration(util.GetEnvDefault("CLEANUP_GRACE_PERIOD", "0s"))
+		gracePeriod, err := util.ParseTimeDuration(util.GetEnvDefault("CLEANUP_GRACE_PERIOD", "24h"))
 		if err != nil {
 			log.Fatal(err)
 			return
