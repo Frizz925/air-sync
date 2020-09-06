@@ -19,12 +19,12 @@ const Dialog: React.FC<DialogProps> = ({ children, shown, onClose }) => {
   });
 
   return (
-    <React.Fragment>
-      <div className={overlayClasses} onClick={onClose} />
+    <div>
+      <div className={overlayClasses} onClick={onClose}></div>
       <div className={containerClasses}>
-        <div className='bg-gray-700 rounded-md shadow-lg'>{children}</div>
+        <div className={styles.content}>{children}</div>
       </div>
-    </React.Fragment>
+    </div>
   );
 };
 

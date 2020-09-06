@@ -8,13 +8,18 @@ export const handleErrorAlert = (err: any) => {
   } else if (typeof err === 'object') {
     if (err.isAxiosError) {
       const axErr = err as AxiosError;
-      const { data } = axErr.response;
-      if (typeof data === 'object') {
-        if (data.error) message = data.error;
-        else if (data.message) message = data.message;
-        else message = axErr.message;
-      } else if (typeof data === 'string') {
-        message = data;
+      const res = axErr.response;
+      if (res) {
+        const data = res.data;
+        if (typeof data === 'object') {
+          if (data.error) message = data.error;
+          else if (data.message) message = data.message;
+          else message = axErr.message;
+        } else if (typeof data === 'string') {
+          message = data;
+        } else {
+          message = axErr.message;
+        }
       } else {
         message = axErr.message;
       }

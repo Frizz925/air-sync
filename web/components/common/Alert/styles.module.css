@@ -13,7 +13,7 @@
 }
 
 .container {
-  @apply flex flex-row justify-center p-2 max-w-md;
+  @apply flex flex-row justify-center p-2 w-full mx-auto max-w-md;
 }
 
 .card {

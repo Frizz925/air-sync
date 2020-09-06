@@ -1,45 +1,50 @@
 import RestResponse from '@/api/models/RestResponse';
 import Button from '@/components/common/Button';
+import { handleErrorAlert } from '@/utils/Error';
 import { AxiosResponse } from 'axios';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import SessionProps from './SessionProps';
 
 export interface ConnectionSessionProps extends SessionProps {}
 
 const ConnectSession: React.FC<ConnectionSessionProps> = ({ api, connect }) => {
-  const [error, setError] = useState('');
-  const inputRef = useRef<HTMLInputElement>();
+  const [value, setValue] = useState('');
 
   const handleConnect = useCallback(async () => {
-    const sessionId = inputRef.current.value;
+    const sessionId = value;
     if (!sessionId) return;
     try {
       await api.getSession(sessionId);
       connect(sessionId);
     } catch (err) {
-      let message = "Can't connect to session";
       if (err.response) {
         const res = (err.response as AxiosResponse).data as RestResponse<{}>;
-        message = res.error || res.message || message;
+        const message = res.error || res.message || "Can't connect to session";
+        handleErrorAlert(message);
       } else {
         console.error(err);
+        handleErrorAlert(err);
       }
-      setError(message);
     }
-  }, [inputRef, connect]);
+  }, [value, connect]);
 
   return (
     <div className='flex flex-col items-center w-full space-y-2'>
       <input
+        type='text'
         className='bg-gray-700 w-full px-4 py-2 rounded-full outline-none text-center'
         placeholder='Enter the session ID'
-        type='text'
-        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
       />
-      <Button color='primary' className='rounded-full' onClick={handleConnect}>
+      <Button
+        color='primary'
+        className='rounded-full'
+        disabled={!value}
+        onClick={handleConnect}
+      >
         Connect
       </Button>
-      <div className='text-red-700 text-sm'>{error}</div>
     </div>
   );
 };

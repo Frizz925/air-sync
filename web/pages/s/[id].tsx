@@ -11,13 +11,15 @@ import {
   createWebSocketClient,
 } from '@/clients';
 import Card from '@/components/common/Card';
+import Confirm from '@/components/common/Confirm';
 import ConnectionState from '@/components/models/ConnectionState';
 import SessionActions from '@/components/session/SessionActions';
 import SessionIndicator from '@/components/session/SessionIndicator';
+import alert from '@/utils/Alert';
 import { handleErrorAlert } from '@/utils/Error';
 import { NotificationHelper } from '@/utils/Notification';
-import { getAttachmentUrl, getBaseUrl } from '@/utils/Url';
-import { AxiosError } from 'axios';
+import { getAttachmentUrl } from '@/utils/Url';
+import Axios, { AxiosError, CancelTokenSource } from 'axios';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { resolve } from 'path';
@@ -26,12 +28,13 @@ import React, { useEffect, useRef, useState } from 'react';
 const SessionForm = dynamic(() => import('@/components/session/SessionForm'), {
   ssr: false,
 });
+
 const SessionMessages = dynamic(
   () => import('@/components/session/SessionMessages'),
   { ssr: false }
 );
 
-const baseUrl = getBaseUrl();
+const { CancelToken } = Axios;
 
 const apiClient = createApiClient();
 const lpClient = createLongPollingClient();
@@ -53,6 +56,10 @@ export default function SessionPage() {
   );
   const [messages, setMessages] = useState<Message[]>([]);
   const [timestamp, setTimestamp] = useState<number>(new Date().getTime());
+  const [messageDialog, setMessageDialog] = useState(false);
+
+  const messageRef = useRef<Message>();
+  const cancelRef = useRef<CancelTokenSource>();
 
   const runningRef = useRef(true);
   const handleError = (error: Error) => {
@@ -189,22 +196,31 @@ export default function SessionPage() {
 
   const doLongPolling = async (sessionId: string) => {
     if (!runningRef.current) return;
+    if (cancelRef.current) cancelRef.current.cancel('Long-polling restarted');
+
     let hasError = false;
     const start = new Date();
+    const source = CancelToken.source();
+    cancelRef.current = source;
     try {
       setConnectionState(ConnectionState.CONNECTED);
-      const resp = await lpClient.get(`/sessions/${sessionId}`);
+      const resp = await lpClient.get(`/sessions/${sessionId}`, {
+        cancelToken: source.token,
+      });
       if (resp.status === 200) {
         const event = (resp.data as RestResponse<SessionEvent<any>>).data;
         handleSessionEvent(event);
       }
     } catch (err) {
+      if (Axios.isCancel(err)) {
+        return Promise.resolve();
+      }
       setConnectionState(ConnectionState.DISCONNECTED);
       console.error(err);
       handleErrorAlert(err);
-      if (err.response) {
+      if (err.isAxiosError) {
         const resp = (err as AxiosError).response;
-        if (resp.status === 404) {
+        if (resp && resp.status === 404) {
           return;
         }
       }
@@ -231,7 +247,7 @@ export default function SessionPage() {
   const query = router.query;
   const sessionId = query.id as string;
 
-  const handleReload = () => {
+  const doReload = () => {
     if (!sessionId) return;
     setConnectionState(ConnectionState.CONNECTING);
     setupApi(sessionId)
@@ -250,13 +266,34 @@ export default function SessionPage() {
       });
   };
 
+  const handleReload = () => {
+    alert('Reloading session...');
+    doReload();
+  };
+
   const handleDelete = () => {
     runningRef.current = false;
     router.push('/');
   };
 
+  const deleteMessagePrompt = (message: Message) => {
+    messageRef.current = message;
+    setMessageDialog(true);
+  };
+
+  const handleMessageDelete = async () => {
+    if (!messageRef.current) return;
+    try {
+      await sessionApi.deleteMessage(sessionId, messageRef.current.id);
+      setMessageDialog(false);
+    } catch (err) {
+      console.error(err);
+      handleErrorAlert(err);
+    }
+  };
+
   useEffect(() => {
-    handleReload();
+    doReload();
     // Update timestamps every 30 seconds
     const interval = setInterval(() => {
       setTimestamp(new Date().getTime());
@@ -285,10 +322,17 @@ export default function SessionPage() {
       </Card>
       <SessionForm api={sessionApi} sessionId={sessionId} />
       <SessionMessages
-        api={sessionApi}
-        sessionId={sessionId}
         messages={messages}
         timestamp={timestamp}
+        onDelete={deleteMessagePrompt}
+      />
+      <Confirm
+        shown={messageDialog}
+        message='Are you sure you want to delete this message?'
+        confirmLabel='Delete'
+        confirmColor='red'
+        onConfirm={handleMessageDelete}
+        onClose={() => setMessageDialog(false)}
       />
     </div>
   );

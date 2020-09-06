@@ -1,7 +1,9 @@
 import QrImageApi from '@/api/QrImageApi';
 import SessionApi from '@/api/SessionApi';
+import Confirm from '@/components/common/Confirm';
 import Dialog from '@/components/common/Dialog';
 import IconButton from '@/components/common/IconButton';
+import alert from '@/utils/Alert';
 import * as Clipboard from '@/utils/Clipboard';
 import { handleErrorAlert } from '@/utils/Error';
 import {
@@ -33,21 +35,25 @@ const SessionActions: React.FC<SessionActionsProps> = ({
   onReload,
   onDelete,
 }) => {
-  const [dialogShown, setDialogShown] = useState(false);
+  const [qrDialog, setQrDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
   const [qrImageSrc, setQrImageSrc] = useState('');
 
   const handleQrImage = async () => {
     try {
       const src = await qrImageApi.generate(getCurrentUrl());
       setQrImageSrc(src);
-      setDialogShown(true);
+      setQrDialog(true);
     } catch (err) {
       console.error(err);
       handleErrorAlert(err);
     }
   };
 
-  const handleCopy = () => Clipboard.copy(getCurrentUrl());
+  const handleCopy = () => {
+    Clipboard.copy(getCurrentUrl());
+    alert('Session link copied to clipboard');
+  };
 
   const handleDelete = async () => {
     try {
@@ -59,9 +65,7 @@ const SessionActions: React.FC<SessionActionsProps> = ({
     }
   };
 
-  const handleClose = () => {
-    setDialogShown(false);
-  };
+  const closeDeleteDialog = () => setDeleteDialog(false);
 
   return (
     <React.Fragment>
@@ -89,12 +93,20 @@ const SessionActions: React.FC<SessionActionsProps> = ({
           icon={faTrashAlt}
           color='red'
           title='Delete session'
-          onClick={handleDelete}
+          onClick={() => setDeleteDialog(true)}
         />
       </div>
-      <Dialog shown={dialogShown} onClose={handleClose}>
+      <Dialog shown={qrDialog} onClose={() => setQrDialog(false)}>
         <img src={qrImageSrc} />
       </Dialog>
+      <Confirm
+        shown={deleteDialog}
+        message='Are you sure you want to delete this session?'
+        confirmLabel='Delete'
+        confirmColor='red'
+        onConfirm={handleDelete}
+        onClose={closeDeleteDialog}
+      />
     </React.Fragment>
   );
 };

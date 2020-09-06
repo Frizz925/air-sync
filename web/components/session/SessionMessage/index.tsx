@@ -1,9 +1,8 @@
 import Message from '@/api/models/Message';
-import SessionApi from '@/api/SessionApi';
 import Card from '@/components/common/Card';
 import IconButton from '@/components/common/IconButton';
+import alert from '@/utils/Alert';
 import * as Clipboard from '@/utils/Clipboard';
-import { handleErrorAlert } from '@/utils/Error';
 import { formatShortTimestamp, formatTimestamp } from '@/utils/Time';
 import { getAttachmentUrl } from '@/utils/Url';
 import {
@@ -16,33 +15,24 @@ import MessageContent from '../MessageContent';
 import styles from './styles.module.css';
 
 export interface SessionMessageProps {
-  api: SessionApi;
-  sessionId: string;
   message: Message;
   timestamp: number;
+  onDelete: () => void;
 }
 
 const SessionMessage: React.FC<SessionMessageProps> = ({
-  api,
-  sessionId,
   message,
   timestamp,
+  onDelete,
 }) => {
   const {
     attachment_id: attachmentId,
     attachment_name: attachmentName,
-    attachment_type: attachmentType,
     created_at: createdAt,
   } = message;
-  const handleCopy = () => Clipboard.copy(message.body);
-
-  const handleDelete = async () => {
-    try {
-      await api.deleteMessage(sessionId, message.id);
-    } catch (err) {
-      console.error(err);
-      handleErrorAlert(err);
-    }
+  const handleCopy = () => {
+    Clipboard.copy(message.body);
+    alert('Message copied to clipboard');
   };
 
   const attachmentUrl = attachmentId
@@ -61,9 +51,11 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
         <MessageContent message={message} />
       </div>
       <div className='flex items-center px-1 py-1'>
-        <div>
-          <IconButton icon={faCopy} onClick={handleCopy} />
-        </div>
+        {message.body && (
+          <div>
+            <IconButton icon={faCopy} onClick={handleCopy} />
+          </div>
+        )}
         {attachmentUrl && (
           <div className='flex items-center overflow-hidden'>
             <a
@@ -89,7 +81,7 @@ const SessionMessage: React.FC<SessionMessageProps> = ({
         )}
         <div className='flex-grow'></div>
         <div>
-          <IconButton icon={faTrashAlt} color='red' onClick={handleDelete} />
+          <IconButton icon={faTrashAlt} color='red' onClick={onDelete} />
         </div>
       </div>
     </Card>

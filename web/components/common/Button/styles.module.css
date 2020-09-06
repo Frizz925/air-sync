@@ -22,3 +22,17 @@
 .primary:hover:not(:disabled) {
   @apply bg-blue-700;
 }
+
+.red {
+  @apply bg-red-700 text-white;
+}
+
+.red:active,
+.red:focus,
+.red:hover:not(:disabled) {
+  @apply bg-red-600;
+}
+
+.rounded {
+  @apply rounded-md;
+}

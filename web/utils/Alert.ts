@@ -23,9 +23,13 @@ const observable = IS_BROWSER
 export const subscribe = (callback: AlertCallback) =>
   observable.subscribe(callback);
 
-const alert = (message: AlertMessage) => observable.notify(message);
+const alert = (message: AlertMessage | string) => {
+  observable.notify(
+    typeof message === 'string' ? { type: 'info', message } : message
+  );
+};
 if (IS_BROWSER) {
-  window.alert = (message: any) => alert({ type: 'info', message });
+  window.alert = (message: any) => alert(message);
 }
 
 export default alert;

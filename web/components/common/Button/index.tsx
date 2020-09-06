@@ -2,10 +2,13 @@ import clsx from 'clsx';
 import React from 'react';
 import styles from './styles.module.css';
 
+export type ButtonColor = 'primary' | 'red';
+
 export interface ButtonProps {
-  color?: 'primary';
+  color?: ButtonColor;
   className?: string;
   disabled?: boolean;
+  rounded?: boolean;
   onClick?: () => void;
 }
 
@@ -14,9 +17,15 @@ const Button: React.FC<ButtonProps> = ({
   color,
   className,
   disabled,
+  rounded,
   onClick,
 }) => {
-  const classes = clsx(styles.button, styles[color], className);
+  const classes = clsx(
+    styles.button,
+    rounded && styles.rounded,
+    styles[color],
+    className
+  );
   return (
     <button className={classes} onClick={onClick} disabled={disabled}>
       {children}

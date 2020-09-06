@@ -1,15 +1,23 @@
+.overlay,
+.container {
+  @apply fixed top-0 left-0 w-screen h-screen;
+}
+
 .overlay {
-  @apply fixed top-0 left-0 w-screen h-screen z-40 cursor-pointer;
+  @apply z-40 cursor-pointer;
   @apply bg-black bg-opacity-50;
-  @apply flex flex-row justify-center items-start;
 }
 
 .container {
-  @apply fixed top-0 left-0 w-screen z-50 py-4 pointer-events-none;
-  @apply flex flex-row items-start justify-center;
+  @apply flex flex-col justify-center items-stretch;
+  @apply z-50 pointer-events-none;
 }
 
-.container > * {
+.content {
+  @apply px-2;
+}
+
+.content > * {
   @apply pointer-events-auto;
 }
 

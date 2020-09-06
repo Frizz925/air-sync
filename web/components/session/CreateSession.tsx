@@ -1,3 +1,4 @@
+import { handleErrorAlert } from '@/utils/Error';
 import React from 'react';
 import SessionProps from './SessionProps';
 
@@ -5,8 +6,13 @@ export interface CreateSessionProps extends SessionProps {}
 
 const CreateSession: React.FC<CreateSessionProps> = ({ api, connect }) => {
   const createSession = async () => {
-    const { data: sessionId } = await api.createSession();
-    connect(sessionId);
+    try {
+      const { data: sessionId } = await api.createSession();
+      connect(sessionId);
+    } catch (err) {
+      console.error(err);
+      handleErrorAlert(err);
+    }
   };
 
   return (
