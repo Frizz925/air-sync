@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const attachmentMaxSize int64 = 2 << 20
+const attachmentMaxSize int64 = 100 << 20
 
 var ErrUploadFileTooLarge = errors.New("Uploaded file too large")
 
