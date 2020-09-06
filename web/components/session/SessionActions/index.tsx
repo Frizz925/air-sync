@@ -97,7 +97,9 @@ const SessionActions: React.FC<SessionActionsProps> = ({
         />
       </div>
       <Dialog shown={qrDialog} onClose={() => setQrDialog(false)}>
-        <img src={qrImageSrc} />
+        <div className='flex justify-center'>
+          <img src={qrImageSrc} />
+        </div>
       </Dialog>
       <Confirm
         shown={deleteDialog}
