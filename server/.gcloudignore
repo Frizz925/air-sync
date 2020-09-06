@@ -14,7 +14,7 @@
 .gitignore
 .editorconfig
 
-.env*
+.env.*
 !.env.production
 
 # Binaries for programs and plugins
