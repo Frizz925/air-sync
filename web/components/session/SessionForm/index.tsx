@@ -25,6 +25,7 @@ import React, { useRef, useState } from 'react';
 import styles from './styles.module.css';
 
 const client = createClient();
+const fileSizeLimit = 100 << 20;
 
 type AttachmentMap = {
   image?: boolean;
@@ -137,8 +138,13 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
       setAttachment({});
       return;
     }
+    const file = files[0];
+    if (file.size > fileSizeLimit) {
+      handleErrorAlert('Maximum file size to attach is 100MB');
+      return;
+    }
     const image = input.accept.startsWith('image/');
-    handleAttachmentFile(files[0], image);
+    handleAttachmentFile(file, image);
   };
 
   const handleFileClear = () => {
@@ -191,19 +197,19 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
   };
 
   const textContainerCls = clsx(
-    'px-2 py-4 border-dashed border-transparent border-2',
+    'px-2 py-4 border-dashed border-transparent border-2 rounded-lg',
     dragging && 'border-blue-700'
   );
 
   const textBoxCls = clsx(dragging && 'pointer-events-none');
 
   const actionsCls = clsx(
-    'flex flex-row-reverse items-center px-1',
+    'flex flex-row-reverse items-center px-1 pb-2',
     processing && 'hidden'
   );
 
   return (
-    <Card className='card py-2 space-y-2'>
+    <Card>
       <div
         className={textContainerCls}
         draggable
@@ -227,9 +233,11 @@ const SessionForm: React.FC<SessionFormProps> = ({ api, sessionId }) => {
           </div>
         </div>
       )}
-      {attachmentRef.current && (
+      {!processing && attachmentRef.current && (
         <div className='flex items-center text-xs overflow-hidden px-1'>
-          <IconButton icon={faTimes} color='red' onClick={handleFileClear} />
+          <div>
+            <IconButton icon={faTimes} color='red' onClick={handleFileClear} />
+          </div>
           <div className={styles.filename}>{attachmentRef.current.name}</div>
         </div>
       )}
