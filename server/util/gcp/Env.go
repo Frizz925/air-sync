@@ -1,9 +1,11 @@
 package gcp
 
-import "os"
+import (
+	"os"
+)
 
 func EnvProjectID() string {
-	return os.Getenv("GOOGLE_PROJECT_ID")
+	return os.Getenv("GOOGLE_CLOUD_PROJECT")
 }
 
 func EnvPubSubTopicID() string {
